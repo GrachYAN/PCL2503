@@ -1,3 +1,4 @@
+# ========== Unity 生成目录 ==========
 /[Ll]ibrary/
 /[Tt]emp/
 /[Oo]bj/
@@ -5,15 +6,40 @@
 /[Bb]uilds/
 /[Ll]ogs/
 /[Mm]emoryCaptures/
+/[Uu]serSettings/
+/[Pp]ackageCache/
+Packages/com.unity.package-manager*/.tmp/
+
+# 允许跟踪 Assets 下的 .meta 文件
 !/[Aa]ssets/**/*.meta
-vs/
+
+# ========== IDE/编辑器 ==========
+.vscode/
+.idea/
+.vs/
+*.code-workspace
+
+# ========== Gradle/Android ==========
 gradle/
+.gradle/
+build/
+*.apk
+*.aab
+*.keystore
+
+# ========== Visual Studio/Mono ==========
 *.csproj
 *.unityproj
 *.sln
+*.user
 *.userprefs
 *.pidb
 *.pdb
 *.mdb
-*.apk
+
+# ========== Unity 资产包 ==========
 *.unitypackage
+
+# ========== 系统/杂项 ==========
+.DS_Store
+Thumbs.db
