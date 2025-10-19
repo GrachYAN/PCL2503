@@ -2,9 +2,7 @@ using UnityEngine;
 
 public class Board : MonoBehaviour
 {
-    [Header("∆Â≈Ã≥ﬂ¥Á")]
-    [Range(2, 16)]
-    public int size = 8;
+    public const int size = 8;
 
     [Header("≈‰…´")]
     public Color lightColor = new Color(0.9f, 0.9f, 0.9f);
