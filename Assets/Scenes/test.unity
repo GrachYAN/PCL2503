@@ -303,9 +303,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   boardTransform: {fileID: 514758623}
-  height: 6
+  distance: 8
+  height: 14
   angle: 50
-  distance: 5
   fieldOfView: 60
   showDebugInfo: 1
 --- !u!1 &437635007
@@ -412,9 +412,9 @@ MonoBehaviour:
   logicManager: {fileID: 1955393314}
   blackSquareMaterial: {fileID: 2100000, guid: 712963ace040adf4a80519062bca671e, type: 2}
   whiteSquareMaterial: {fileID: 2100000, guid: d0ad71b1edae4cf4d949020c71d6fde1, type: 2}
-  pieceScale: 0.1
+  pieceScale: 0.01
   pieceYOffset: 0.5
-  pawnYOffset: 0.4
+  pawnYOffset: 0.5
 --- !u!1 &1955393311
 GameObject:
   m_ObjectHideFlags: 0
