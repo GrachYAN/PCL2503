@@ -1,89 +1,9 @@
-// using Unity.Netcode;
-// using UnityEngine;
-// using UnityEngine.UI;
-// using TMPro; // We need this for the Input Field
-// using Unity.Netcode.Transports.UTP; // We need this to change the IP
-
-// public class NetworkManagerUI : MonoBehaviour
-// {
-//     [SerializeField] private Button hostButton;
-//     [SerializeField] private Button clientButton;
-//     [SerializeField] private TMP_InputField ipAddressField;
-
-//     private void Awake()
-//     {
-//         if (hostButton == null)
-//         {
-//             Debug.LogError("NetworkManagerUI: Host Button is not assigned in the Inspector!");
-//             return;
-//         }
-//         if (clientButton == null)
-//         {
-//             Debug.LogError("NetworkManagerUI: Client Button is not assigned in the Inspector!");
-//             return;
-//         }
-//         if (ipAddressField == null)
-//         {
-//             Debug.LogError("NetworkManagerUI: IP Address Field is not assigned in the Inspector!");
-//             return;
-//         }
-
-//         hostButton.onClick.AddListener(() =>
-//         {
-//             Debug.Log("Starting as Host...");
-//             NetworkManager.Singleton.StartHost();
-//             HideInteractionUI(); // Changed to HideInteractionUI
-//         });
-
-//         clientButton.onClick.AddListener(() =>
-//         {
-//             string ipAddress = ipAddressField.text;
-//             if (string.IsNullOrWhiteSpace(ipAddress))
-//             {
-//                 Debug.Log("IP Address is empty, using localhost (127.0.0.1)");
-//                 ipAddress = "127.0.0.1";
-//             }
-            
-//             Debug.Log($"Starting as Client, connecting to {ipAddress}...");
-
-//             UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
-//             if (transport != null)
-//             {
-//                 transport.ConnectionData.Address = ipAddress;
-//             }
-//             else
-//             {
-//                 Debug.LogError("Could not find UnityTransport on the NetworkManager!");
-//                 return;
-//             }
-
-//             NetworkManager.Singleton.StartClient();
-//             HideInteractionUI(); // Changed to HideInteractionUI
-//         });
-//     }
-
-//     // New method to only hide the interactive elements
-//     private void HideInteractionUI()
-//     {
-//         hostButton.gameObject.SetActive(false);
-//         clientButton.gameObject.SetActive(false);
-//         ipAddressField.gameObject.SetActive(false);
-//     }
-
-//     public void ShowInteractionUI()
-//     {
-//         // This method is now valid because the variables are defined
-//         hostButton.gameObject.SetActive(true);
-//         clientButton.gameObject.SetActive(true);
-//         ipAddressField.gameObject.SetActive(true);
-//     }
-// }
-
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Unity.Netcode.Transports.UTP;
+using System.Net;
 
 public class NetworkManagerUI : MonoBehaviour
 {
@@ -192,6 +112,36 @@ public class NetworkManagerUI : MonoBehaviour
         if (string.IsNullOrEmpty(ip))
         {
             ip = "127.0.0.1";
+        }
+
+        bool isValid = false;
+
+        if (ip.ToLower() == "localhost")
+        {
+            isValid = true;
+            ip = "127.0.0.1"; // Standardize for the transport
+        }
+        else
+        {
+            // Check 2: Check for 4 parts (e.g., "192.168.1.1")
+            // This will fail "5.5", which only has 2 parts
+            var parts = ip.Split('.');
+            if (parts.Length == 4 && IPAddress.TryParse(ip, out _))
+            {
+                // It has 4 parts AND it's a valid IP format
+                isValid = true;
+            }
+        }
+
+        // Check 3: Final validation
+        if (!isValid)
+        {
+            errorMessageText.text = $"'{ip}' is not a valid IP address format.";
+            errorMessageText.color = Color.red;
+            errorMessageText.gameObject.SetActive(true);
+            connectButton.gameObject.SetActive(false);
+            ipAddressField.gameObject.SetActive(false);
+            return; // Stop here, don't try to connect
         }
 
         UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
