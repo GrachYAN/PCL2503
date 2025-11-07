@@ -4,13 +4,22 @@ using UnityEngine.UI;
 using TMPro;
 using Unity.Netcode.Transports.UTP;
 using System.Net;
+using UnityEngine.SceneManagement;
 
 public class NetworkManagerUI : MonoBehaviour
 {
+    [Header("Scene Management")]
+    [SerializeField] private NetworkSceneManager networkSceneManager;
+    
     [Header("Panels")]
+    [SerializeField] private GameObject modeSelectPanel;
     [SerializeField] private GameObject mainPanel;
     [SerializeField] private GameObject hostWaitingPanel;
     [SerializeField] private GameObject joinGamePanel;
+
+    [Header("Mode Select Panel")]
+    [SerializeField] private Button onlineModeButton;
+    [SerializeField] private Button offlineModeButton;
 
     [Header("Main Panel Buttons")]
     [SerializeField] private Button startGameButton;
@@ -29,9 +38,12 @@ public class NetworkManagerUI : MonoBehaviour
     private void Awake()
     {
         // Set initial state
-        ShowMainPanel();
+        ShowModeSelectPanel();
 
-        // --- Assign Listeners ---
+        //Mode Select Panel
+        onlineModeButton.onClick.AddListener(OnOnlineModeClicked);
+        offlineModeButton.onClick.AddListener(OnOfflineModeClicked);
+
         // Main Panel
         startGameButton.onClick.AddListener(OnStartHostClicked);
         joinGameButton.onClick.AddListener(OnJoinGameClicked);
@@ -44,14 +56,41 @@ public class NetworkManagerUI : MonoBehaviour
         returnToMainButton.onClick.AddListener(ShowMainPanel);
     }
 
-    /// <summary>
-    /// Shows the Main Panel and hides the others.
-    /// </summary>
+    public void ShowModeSelectPanel()
+    {
+        modeSelectPanel.SetActive(true);
+        mainPanel.SetActive(false);
+        hostWaitingPanel.SetActive(false);
+        joinGamePanel.SetActive(false);
+    }
     private void ShowMainPanel()
     {
+        modeSelectPanel.SetActive(false);
         mainPanel.SetActive(true);
         hostWaitingPanel.SetActive(false);
         joinGamePanel.SetActive(false);
+    }
+
+    private void OnOnlineModeClicked()
+    {
+        GameModeManager.Instance.SetMode(GameModeManager.GameMode.Online);
+        ShowMainPanel(); // This is your existing function
+    }
+
+    private void OnOfflineModeClicked()
+    {
+        GameModeManager.Instance.SetMode(GameModeManager.GameMode.Offline);
+
+        // Directly load the game scene
+        // We get the scene name from NetworkSceneManager to be safe
+        if (networkSceneManager != null && !string.IsNullOrEmpty(networkSceneManager.GameSceneName))
+        {
+            SceneManager.LoadScene(networkSceneManager.GameSceneName);
+        }
+        else
+        {
+            Debug.LogError("GameSceneName is not set in NetworkSceneManager! Cannot load game.");
+        }
     }
 
     /// <summary>
