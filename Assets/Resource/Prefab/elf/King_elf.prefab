@@ -62,7 +62,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: e23b6e9148ce2eb41b54bcc49aba6c66, type: 3}
       propertyPath: m_Name
-      value: King
+      value: King_elf
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -114,3 +114,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c27645353663544e8d4c393b1283cf4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  pieceUIPrefab: {fileID: 9124057939245011769, guid: bc6a613e10083a5499a207050cea26f0, type: 3}

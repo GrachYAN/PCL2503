@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿/*
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -219,6 +220,363 @@ public class InputManager : MonoBehaviour
         if (actionPanel != null)
         {
             actionPanel.SetActive(false);
+        }
+    }
+
+    private void TryMoveToTarget(RaycastHit hit)
+    {
+        Vector2 targetCoords = GetCoordinatesFromHit(hit);
+        if (IsTargetInHighlightedList(targetCoords))
+        {
+            bool isCapture = logicManager.boardMap[(int)targetCoords.x, (int)targetCoords.y] != null;
+            selectedPiece.Move(targetCoords);
+            if (!isCapture && logicManager.moveSound != null) { logicManager.moveSound.Play(); }
+            else if (isCapture && logicManager.captureSound != null) { logicManager.captureSound.Play(); }
+            logicManager.lastMovedPiece = selectedPiece;
+            if (!logicManager.isPromotionActive)
+            {
+                logicManager.EndTurn();
+            }
+            ResetSelection();
+        }
+        else
+        {
+            currentState = InputState.PieceSelected;
+            UnhighlightLegalMoves();
+            ShowActionPanel(selectedPiece);
+        }
+    }
+
+    private void TryCastAtTarget(RaycastHit hit)
+    {
+        Vector2 targetCoords = GetCoordinatesFromHit(hit);
+        if (IsTargetInHighlightedList(targetCoords))
+        {
+            selectedSpell.Cast(targetCoords);
+            if (!logicManager.isPromotionActive)
+            {
+                logicManager.EndTurn();
+            }
+            ResetSelection();
+        }
+        else
+        {
+            currentState = InputState.PieceSelected;
+            UnhighlightLegalMoves();
+            ShowActionPanel(selectedPiece);
+        }
+    }
+
+    private Vector2 GetCoordinatesFromHit(RaycastHit hit)
+    {
+        Square targetSquare = hit.transform.GetComponent<Square>();
+        if (targetSquare != null)
+        {
+            return new Vector2(targetSquare.transform.position.x, targetSquare.transform.position.z);
+        }
+        Piece targetPiece = hit.transform.GetComponent<Piece>();
+        if (targetPiece != null)
+        {
+            return targetPiece.GetCoordinates();
+        }
+        return new Vector2(-1, -1);
+    }
+
+    private bool IsTargetInHighlightedList(Vector2 targetCoords)
+    {
+        if (targetCoords.x == -1) return false;
+        foreach (Square sq in highlightedSquares)
+        {
+            if (Mathf.Approximately(sq.transform.position.x, targetCoords.x) && Mathf.Approximately(sq.transform.position.z, targetCoords.y))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void UnhighlightSelectedSquare()
+    {
+        if (currentlyHighlightedSquare != null)
+        {
+            currentlyHighlightedSquare.Unhighlight();
+            currentlyHighlightedSquare = null;
+        }
+    }
+
+    void HighlightSelectedSquare()
+    {
+        UnhighlightSelectedSquare();
+        Vector2 pieceCoordinates = selectedPiece.GetCoordinates();
+        currentlyHighlightedSquare = logicManager.GetSquareAtPosition(pieceCoordinates);
+        if (currentlyHighlightedSquare != null)
+        {
+            currentlyHighlightedSquare.Highlight(new Color(0f, 0.6f, 0.6f));
+        }
+    }
+
+    void HighlightLegalMoves(List<Vector2> legalMoves)
+    {
+        UnhighlightLegalMoves();
+        foreach (Vector2 move in legalMoves)
+        {
+            Square square = logicManager.GetSquareAtPosition(move);
+            if (square == null) continue;
+            Piece pieceOnSquare = logicManager.boardMap[(int)move.x, (int)move.y];
+            if (pieceOnSquare != null)
+            {
+                square.Highlight(Color.red);
+            }
+            else
+            {
+                square.Highlight(Color.cyan);
+            }
+            highlightedSquares.Add(square);
+        }
+    }
+
+    void UnhighlightLegalMoves()
+    {
+        foreach (Square square in highlightedSquares)
+        {
+            square.Unhighlight();
+        }
+        highlightedSquares.Clear();
+    }
+}
+*/
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
+using TMPro;
+// ✅ 必须引入 EventSystems 命名空间
+using UnityEngine.EventSystems;
+
+public class InputManager : MonoBehaviour
+{
+    private enum InputState
+    {
+        None,
+        PieceSelected,
+        Moving,
+        CastingSpell
+    }
+
+    private InputState currentState = InputState.None;
+    private Piece selectedPiece;
+    private Spell selectedSpell;
+
+    private LogicManager logicManager;
+    private List<Square> highlightedSquares = new List<Square>();
+    private Square currentlyHighlightedSquare;
+    private InputAction clickAction;
+    private Camera mainCamera;
+
+    [Header("UI 引用")]
+    public GameObject actionPanel;
+    public GameObject actionButtonPrefab;
+    public Transform buttonsContainer;
+
+    public Slider healthSlider;
+    public Slider manaSlider;
+
+    private RectTransform actionPanelRectTransform;
+
+    void Start()
+    {
+        logicManager = Object.FindFirstObjectByType<LogicManager>();
+        clickAction = new InputAction(type: InputActionType.Button, binding: "<Mouse>/leftButton");
+        clickAction.performed += ctx => OnMouseClick();
+        clickAction.Enable();
+
+        mainCamera = Camera.main;
+        if (actionPanel != null)
+        {
+            actionPanel.SetActive(false);
+            actionPanelRectTransform = actionPanel.GetComponent<RectTransform>();
+        }
+
+        if (healthSlider != null) healthSlider.gameObject.SetActive(false);
+        if (manaSlider != null) manaSlider.gameObject.SetActive(false);
+    }
+
+    void OnDestroy()
+    {
+        clickAction.Disable();
+    }
+
+    void Update()
+    {
+        if (actionPanel != null && actionPanel.activeSelf && selectedPiece != null)
+        {
+            UpdateActionPanelPosition();
+        }
+    }
+
+    private void UpdateActionPanelPosition()
+    {
+        Vector3 pieceWorldPos = selectedPiece.transform.position + new Vector3(0, 1.5f, 0);
+        Vector2 screenPos = mainCamera.WorldToScreenPoint(pieceWorldPos);
+        actionPanelRectTransform.position = screenPos;
+    }
+
+    // ⬇️⬇️⬇️ 警告的源头在这里，我们来修复它 ⬇️⬇️⬇️
+    private void OnMouseClick()
+    {
+        // ✅ 【修复警告的核心代码】
+        // 我们不再使用 IsPointerOverGameObject()，而是手动进行UI射线检测，这个方法在事件回调中是可靠的。
+        PointerEventData eventData = new PointerEventData(EventSystem.current);
+        eventData.position = Mouse.current.position.ReadValue();
+        List<RaycastResult> results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(eventData, results);
+
+        // 如果检测结果数量大于0，说明点击到了UI元素，直接返回，不处理后续的游戏世界点击。
+        if (results.Count > 0)
+        {
+            return;
+        }
+
+        if (logicManager.isPromotionActive) return;
+
+        Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
+        if (!Physics.Raycast(ray, out RaycastHit hit))
+        {
+            ResetSelection();
+            return;
+        }
+
+        switch (currentState)
+        {
+            case InputState.None:
+            case InputState.PieceSelected:
+                TrySelectPiece(hit);
+                break;
+            case InputState.Moving:
+                TryMoveToTarget(hit);
+                break;
+            case InputState.CastingSpell:
+                TryCastAtTarget(hit);
+                break;
+        }
+    }
+
+    // --- 以下所有方法保持不变 ---
+
+    private void TrySelectPiece(RaycastHit hit)
+    {
+        Piece piece = hit.transform.GetComponent<Piece>();
+        if (piece == null)
+        {
+            Square square = hit.transform.GetComponent<Square>();
+            if (square != null)
+            {
+                Vector2 coords = new Vector2(square.transform.position.x, square.transform.position.z);
+                piece = logicManager.boardMap[(int)coords.x, (int)coords.y];
+            }
+        }
+
+        if (piece != null && ((piece.IsWhite && logicManager.isWhiteTurn) || (!piece.IsWhite && !logicManager.isWhiteTurn)))
+        {
+            if (selectedPiece == piece)
+            {
+                ResetSelection();
+                return;
+            }
+
+            ResetSelection();
+            selectedPiece = piece;
+            currentState = InputState.PieceSelected;
+            HighlightSelectedSquare();
+            ShowActionPanel(piece);
+        }
+        else
+        {
+            ResetSelection();
+        }
+    }
+
+    private void ShowActionPanel(Piece piece)
+    {
+        if (actionPanel == null || actionButtonPrefab == null || buttonsContainer == null) return;
+
+        foreach (Transform child in buttonsContainer)
+        {
+            Destroy(child.gameObject);
+        }
+
+        actionPanel.SetActive(true);
+
+        if (healthSlider != null && manaSlider != null)
+        {
+            healthSlider.gameObject.SetActive(true);
+            manaSlider.gameObject.SetActive(true);
+
+            healthSlider.maxValue = piece.MaxHP;
+            healthSlider.value = piece.CurrentHP;
+
+            manaSlider.maxValue = piece.MaxMana;
+            manaSlider.value = piece.CurrentMana;
+        }
+
+        GameObject moveButtonObj = Instantiate(actionButtonPrefab, buttonsContainer);
+        moveButtonObj.GetComponentInChildren<TextMeshProUGUI>().text = "Move";
+        moveButtonObj.GetComponent<Button>().onClick.AddListener(OnMoveButton);
+
+        for (int i = 0; i < piece.Spells.Count; i++)
+        {
+            int spellIndex = i;
+            Spell spell = piece.Spells[spellIndex];
+
+            GameObject spellButtonObj = Instantiate(actionButtonPrefab, buttonsContainer);
+            spellButtonObj.GetComponentInChildren<TextMeshProUGUI>().text = spell.SpellName;
+
+            Button spellButton = spellButtonObj.GetComponent<Button>();
+            spellButton.onClick.AddListener(() => OnSpellButton(spellIndex));
+
+            if (!spell.CanCast())
+            {
+                spellButton.interactable = false;
+            }
+        }
+    }
+
+    private void ResetSelection()
+    {
+        UnhighlightSelectedSquare();
+        UnhighlightLegalMoves();
+
+        selectedPiece = null;
+        selectedSpell = null;
+        currentState = InputState.None;
+
+        if (actionPanel != null)
+        {
+            actionPanel.SetActive(false);
+        }
+
+        if (healthSlider != null) healthSlider.gameObject.SetActive(false);
+        if (manaSlider != null) manaSlider.gameObject.SetActive(false);
+    }
+
+    public void OnMoveButton()
+    {
+        if (selectedPiece == null || currentState != InputState.PieceSelected) return;
+        currentState = InputState.Moving;
+        actionPanel.SetActive(false);
+        HighlightLegalMoves(selectedPiece.GetLegalMoves());
+    }
+
+    public void OnSpellButton(int spellIndex)
+    {
+        if (selectedPiece == null || spellIndex >= selectedPiece.Spells.Count || currentState != InputState.PieceSelected) return;
+        Spell spell = selectedPiece.Spells[spellIndex];
+        if (spell.CanCast())
+        {
+            currentState = InputState.CastingSpell;
+            selectedSpell = spell;
+            actionPanel.SetActive(false);
+            HighlightLegalMoves(spell.GetValidTargetSquares());
         }
     }
 
