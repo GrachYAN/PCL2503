@@ -264,7 +264,7 @@ public class LogicManager : MonoBehaviour
     public void HandlePromotion(Pawn pawn)
     {
         isPromotionActive = true;
-        promotionUI.Show(pawn);
+        promotionUI.ShowPromotionPanel(pawn);
     }
 
     public void ToggleCameraRotation(bool isEnabled)
@@ -363,3 +363,4 @@ public class LogicManager : MonoBehaviour
         return true;
     }
 }
+

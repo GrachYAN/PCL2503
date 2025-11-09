@@ -893,9 +893,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Square: {fileID: 5750736791505326309, guid: ac1a72014352aaa41a55a646884dae63, type: 3}
-  PiecePrefabs:
+  ElfPiecePrefabs:
   - {fileID: 7562439285705578204, guid: 3644c7420b63c824da27a093c88d757e, type: 3}
-  - {fileID: 9043090218629091186, guid: 43b1cb0cca558224f9386e2b3945caba, type: 3}
+  - {fileID: 5897507027155726088, guid: 803f4212dff73cc49852bd41dd8322bd, type: 3}
   - {fileID: 6268782854978830029, guid: 3809d2aa02146ac4ea87e44f1f33f72f, type: 3}
   - {fileID: 1327952644970696711, guid: dcdd0f1c1f3713042adbf8c3fecfbacb, type: 3}
   - {fileID: 8853956376281491864, guid: d65da8af45638f448b397aa011d5bcb2, type: 3}
