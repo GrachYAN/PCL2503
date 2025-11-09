@@ -895,11 +895,18 @@ MonoBehaviour:
   Square: {fileID: 5750736791505326309, guid: ac1a72014352aaa41a55a646884dae63, type: 3}
   PiecePrefabs:
   - {fileID: 7562439285705578204, guid: 3644c7420b63c824da27a093c88d757e, type: 3}
-  - {fileID: 5897507027155726088, guid: 803f4212dff73cc49852bd41dd8322bd, type: 3}
+  - {fileID: 9043090218629091186, guid: 43b1cb0cca558224f9386e2b3945caba, type: 3}
   - {fileID: 6268782854978830029, guid: 3809d2aa02146ac4ea87e44f1f33f72f, type: 3}
   - {fileID: 1327952644970696711, guid: dcdd0f1c1f3713042adbf8c3fecfbacb, type: 3}
   - {fileID: 8853956376281491864, guid: d65da8af45638f448b397aa011d5bcb2, type: 3}
   - {fileID: 4502673826448487168, guid: fbfcd059e625d244d837db8b69cfca2e, type: 3}
+  DwarfPiecePrefabs:
+  - {fileID: 4471498894221089535, guid: 6c0c2ec61504aec43bb0a038a82ef0e9, type: 3}
+  - {fileID: 9043090218629091186, guid: 43b1cb0cca558224f9386e2b3945caba, type: 3}
+  - {fileID: 1420397970393527504, guid: 34523936690c757448db4ead20296e0b, type: 3}
+  - {fileID: 9145460050450544814, guid: 613e8d7a1a6465e46a7da08874044afc, type: 3}
+  - {fileID: 4492699837196277019, guid: 4691de7a6fc61d8439ba8f18d6aabb64, type: 3}
+  - {fileID: 4838682725620083323, guid: d5183802b429c6249af47b2414312dd0, type: 3}
   PieceMaterials:
   - {fileID: 2100000, guid: d0ad71b1edae4cf4d949020c71d6fde1, type: 2}
   - {fileID: 2100000, guid: 712963ace040adf4a80519062bca671e, type: 2}
