@@ -63,6 +63,20 @@ public abstract class Piece : MonoBehaviour
         HasMoved = 0;
     }
 
+    public void Initialize(string pieceType, bool isWhite, Faction faction)
+    {
+        this.PieceType = pieceType;
+        this.IsWhite = isWhite;
+        this.PieceFaction = faction; // 保存阵营信息
+        this.HasMoved = 0;
+
+        SetStatsBasedOnType(pieceType);
+        this.CurrentHP = this.MaxHP;
+        this.CurrentMana = 0;
+
+        InitializeSpells(pieceType, faction); // 传递阵营给技能初始化方法
+    }
+
     private void Start()
     {
         logicManager = Object.FindFirstObjectByType<LogicManager>();

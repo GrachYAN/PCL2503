@@ -248,55 +248,55 @@ public class LogicManager : NetworkBehaviour
         Pawn pawnToPromote = boardMap[pawnX, pawnY] as Pawn;
         if (pawnToPromote != null)
         {
-            promotionUI.Show(pawnToPromote);
+            // promotionUI.Show(pawnToPromote);
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
     public void CompletePromotionServerRpc(int pawnX, int pawnY, string pieceType, ServerRpcParams rpcParams = default)
     {
-        // Security check (simplified):
-        Pawn pawn = boardMap[pawnX, pawnY] as Pawn;
-        if (pawn == null) return;
+        // // Security check (simplified):
+        // Pawn pawn = boardMap[pawnX, pawnY] as Pawn;
+        // if (pawn == null) return;
         
-        // --- 1. Destroy old pawn and create new piece ---
-        Destroy(pawn.gameObject);
-        boardMap[pawnX, pawnY] = null;
+        // // --- 1. Destroy old pawn and create new piece ---
+        // Destroy(pawn.gameObject);
+        // boardMap[pawnX, pawnY] = null;
 
-        Board board = FindFirstObjectByType<Board>();
-        GameObject prefabToSpawn = null;
-        float yOffset = board.pieceYOffset;
+        // Board board = FindFirstObjectByType<Board>();
+        // GameObject prefabToSpawn = null;
+        // float yOffset = board.pieceYOffset;
 
-        switch (pieceType)
-        {
-            case "Queen":
-                prefabToSpawn = board.PiecePrefabs[4];
-                break;
-            case "Rook":
-                prefabToSpawn = board.PiecePrefabs[1];
-                break;
-            case "Bishop":
-                prefabToSpawn = board.PiecePrefabs[3];
-                break;
-            case "Knight":
-                prefabToSpawn = board.PiecePrefabs[2];
-                break;
-        }
+        // // switch (pieceType)
+        // // {
+        // //     case "Queen":
+        // //         prefabToSpawn = board.PiecePrefabs[4];
+        // //         break;
+        // //     case "Rook":
+        // //         prefabToSpawn = board.PiecePrefabs[1];
+        // //         break;
+        // //     case "Bishop":
+        // //         prefabToSpawn = board.PiecePrefabs[3];
+        // //         break;
+        // //     case "Knight":
+        // //         prefabToSpawn = board.PiecePrefabs[2];
+        // //         break;
+        // // }
 
-        if (prefabToSpawn != null)
-        {
-            Material pieceMaterial = pawn.IsWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
-            Vector3 position = new Vector3(pawnX, yOffset, pawnY);
-            board.InstantiatePiece(prefabToSpawn, position, pieceMaterial, pieceType, pawn.IsWhite);
-        }
+        // if (prefabToSpawn != null)
+        // {
+        //     Material pieceMaterial = pawn.IsWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
+        //     Vector3 position = new Vector3(pawnX, yOffset, pawnY);
+        //     // board.InstantiatePiece(prefabToSpawn, position, pieceMaterial, pieceType, pawn.IsWhite);
+        // }
         
-        // --- 2. Tell all clients to do the same ---
-        CompletePromotionClientRpc(pawnX, pawnY, pieceType, pawn.IsWhite);
+        // // --- 2. Tell all clients to do the same ---
+        // CompletePromotionClientRpc(pawnX, pawnY, pieceType, pawn.IsWhite);
 
-        // --- 3. End the turn ---
-        isPromotionActive = false;
-        UpdateCheckMap();
-        EndTurn();
+        // // --- 3. End the turn ---
+        // isPromotionActive = false;
+        // UpdateCheckMap();
+        // EndTurn();
     }
     
     // --- NEW: OFFLINE Promotion Logic ---
@@ -305,46 +305,46 @@ public class LogicManager : NetworkBehaviour
     /// </summary>
     public void CompletePromotionOffline(int pawnX, int pawnY, string pieceType)
     {
-        // Security check (simplified):
-        Pawn pawn = boardMap[pawnX, pawnY] as Pawn;
-        if (pawn == null) return;
+    //     // Security check (simplified):
+    //     Pawn pawn = boardMap[pawnX, pawnY] as Pawn;
+    //     if (pawn == null) return;
         
-        // --- 1. Destroy old pawn and create new piece ---
-        Destroy(pawn.gameObject);
-        boardMap[pawnX, pawnY] = null;
+    //     // --- 1. Destroy old pawn and create new piece ---
+    //     Destroy(pawn.gameObject);
+    //     boardMap[pawnX, pawnY] = null;
 
-        Board board = FindFirstObjectByType<Board>();
-        GameObject prefabToSpawn = null;
-        float yOffset = board.pieceYOffset;
+    //     Board board = FindFirstObjectByType<Board>();
+    //     GameObject prefabToSpawn = null;
+    //     float yOffset = board.pieceYOffset;
 
-        switch (pieceType)
-        {
-            case "Queen":
-                prefabToSpawn = board.PiecePrefabs[4];
-                break;
-            case "Rook":
-                prefabToSpawn = board.PiecePrefabs[1];
-                break;
-            case "Bishop":
-                prefabToSpawn = board.PiecePrefabs[3];
-                break;
-            case "Knight":
-                prefabToSpawn = board.PiecePrefabs[2];
-                break;
-        }
+    //     // switch (pieceType)
+    //     // {
+    //     //     case "Queen":
+    //     //         prefabToSpawn = board.PiecePrefabs[4];
+    //     //         break;
+    //     //     case "Rook":
+    //     //         prefabToSpawn = board.PiecePrefabs[1];
+    //     //         break;
+    //     //     case "Bishop":
+    //     //         prefabToSpawn = board.PiecePrefabs[3];
+    //     //         break;
+    //     //     case "Knight":
+    //     //         prefabToSpawn = board.PiecePrefabs[2];
+    //     //         break;
+    //     // }
 
-        if (prefabToSpawn != null)
-        {
-            Material pieceMaterial = pawn.IsWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
-            Vector3 position = new Vector3(pawnX, yOffset, pawnY);
-            board.InstantiatePiece(prefabToSpawn, position, pieceMaterial, pieceType, pawn.IsWhite);
-        }
+    //     if (prefabToSpawn != null)
+    //     {
+    //         Material pieceMaterial = pawn.IsWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
+    //         Vector3 position = new Vector3(pawnX, yOffset, pawnY);
+    //         // board.InstantiatePiece(prefabToSpawn, position, pieceMaterial, pieceType, pawn.IsWhite);
+    //     }
         
-        // --- 2. End the turn ---
-        // (No ClientRpc needed, just run the logic)
-        isPromotionActive = false;
-        UpdateCheckMap();
-        EndTurn();
+    //     // --- 2. End the turn ---
+    //     // (No ClientRpc needed, just run the logic)
+    //     isPromotionActive = false;
+    //     UpdateCheckMap();
+    //     EndTurn();
     }
     // --- END NEW METHOD ---
 
@@ -352,45 +352,45 @@ public class LogicManager : NetworkBehaviour
     [ClientRpc]
     private void CompletePromotionClientRpc(int pawnX, int pawnY, string pieceType, bool isWhite)
     {
-        // Don't execute this logic on the Host/Server, it already did.
-        if (IsHost && GameModeManager.Instance.CurrentMode == GameModeManager.GameMode.Online) return;
+        // // Don't execute this logic on the Host/Server, it already did.
+        // if (IsHost && GameModeManager.Instance.CurrentMode == GameModeManager.GameMode.Online) return;
         
-        // Destroy the old pawn
-        if (boardMap[pawnX, pawnY] != null)
-        {
-            Destroy(boardMap[pawnX, pawnY].gameObject);
-            boardMap[pawnX, pawnY] = null;
-        }
+        // // Destroy the old pawn
+        // if (boardMap[pawnX, pawnY] != null)
+        // {
+        //     Destroy(boardMap[pawnX, pawnY].gameObject);
+        //     boardMap[pawnX, pawnY] = null;
+        // }
 
-        // Instantiate the new piece
-        Board board = FindFirstObjectByType<Board>();
-        GameObject prefabToSpawn = null;
-        float yOffset = board.pieceYOffset;
+        // // Instantiate the new piece
+        // Board board = FindFirstObjectByType<Board>();
+        // GameObject prefabToSpawn = null;
+        // float yOffset = board.pieceYOffset;
 
-        switch (pieceType)
-        {
-            case "Queen":
-                prefabToSpawn = board.PiecePrefabs[4];
-                break;
-            case "Rook":
-                prefabToSpawn = board.PiecePrefabs[1];
-                break;
-            case "Bishop":
-                prefabToSpawn = board.PiecePrefabs[3];
-                break;
-            case "Knight":
-                prefabToSpawn = board.PiecePrefabs[2];
-                break;
-        }
+        // // switch (pieceType)
+        // // {
+        // //     case "Queen":
+        // //         prefabToSpawn = board.PiecePrefabs[4];
+        // //         break;
+        // //     case "Rook":
+        // //         prefabToSpawn = board.PiecePrefabs[1];
+        // //         break;
+        // //     case "Bishop":
+        // //         prefabToSpawn = board.PiecePrefabs[3];
+        // //         break;
+        // //     case "Knight":
+        // //         prefabToSpawn = board.PiecePrefabs[2];
+        // //         break;
+        // // }
 
-        if (prefabToSpawn != null)
-        {
-            Material pieceMaterial = isWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
-            Vector3 position = new Vector3(pawnX, yOffset, pawnY);
-            board.InstantiatePiece(prefabToSpawn, position, pieceMaterial, pieceType, isWhite);
-        }
+        // if (prefabToSpawn != null)
+        // {
+        //     Material pieceMaterial = isWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
+        //     Vector3 position = new Vector3(pawnX, yOffset, pawnY);
+        //     // board.InstantiatePiece(prefabToSpawn, position, pieceMaterial, pieceType, isWhite);
+        // }
         
-        isPromotionActive = false;
+        // isPromotionActive = false;
     }
 
     // --- All your original helper methods ---
@@ -444,12 +444,6 @@ public class LogicManager : NetworkBehaviour
         }
         // Client does not change the turn, it waits for the server.
         // --- END NEW LOGIC ---
-        
-        // This RPC is no longer needed
-        // if (IsServer && GameModeManager.Instance.CurrentMode == GameModeManager.GameMode.Online)
-        // {
-        //     EndTurnClientRpc(isWhiteTurn);
-        // }
 
         CheckGameOver();
         if (Time.timeScale == 0)
@@ -649,7 +643,7 @@ public class LogicManager : NetworkBehaviour
     {
         isPromotionActive = true;
         if (promotionUI == null) promotionUI = FindFirstObjectByType<PromotionUI>();
-        promotionUI.Show(pawn);
+        // promotionUI.Show(pawn);
     }
     
     public void ToggleCameraRotation(bool isEnabled)
@@ -687,7 +681,7 @@ public class LogicManager : NetworkBehaviour
         moveSound.volume = soundVolume;
         captureSound.volume = soundVolume;
     }
-    
+
     public void DestroyPiece(Piece piece)
     {
         if (piece == null) return;
@@ -710,5 +704,44 @@ public class LogicManager : NetworkBehaviour
             gameOverUI.ShowGameOver(result);
             Time.timeScale = 0;
         }
+    }
+    
+    public bool HasLineOfSight(Vector2 start, Vector2 end)
+    {
+        // 此实现适用于直线和对角线。
+        Vector2 direction = end - start;
+        Vector2 step = Vector2.zero;
+
+        // 确定步进方向 (dx, dy 只能是 -1, 0, 或 1)
+        float dx = Mathf.Clamp(direction.x, -1, 1);
+        float dy = Mathf.Clamp(direction.y, -1, 1);
+        step = new Vector2(dx, dy);
+
+        if (direction.x != 0 && direction.y != 0 && Mathf.Abs(direction.x) != Mathf.Abs(direction.y))
+        {
+            // 对于非直线/对角线，如 骑士(Knight)，LoS 通常不适用
+            return true;
+        }
+
+        Vector2 currentPos = start + step; // 从起点后一格开始检查
+
+        while (Vector2.Distance(currentPos, end) > 0.1f) // 检查是否到达终点
+        {
+            if (currentPos.x < 0 || currentPos.x >= 8 || currentPos.y < 0 || currentPos.y >= 8)
+            {
+                break; // 超出棋盘
+            }
+
+            // 检查格子上是否有棋子
+            if (boardMap[(int)currentPos.x, (int)currentPos.y] != null)
+            {
+                return false; // 被阻挡！ 
+            }
+
+            currentPos += step;
+        }
+
+        // 循环完成，没有障碍物
+        return true;
     }
 }

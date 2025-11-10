@@ -17,51 +17,59 @@ public class PromotionUI : MonoBehaviour
         panel.SetActive(false);
     }
 
-    public void Show(Pawn pawn)
+    public void ShowPromotionPanel(Pawn pawnToPromote)
     {
-        promotingPawn = pawn;
+        promotingPawn = pawnToPromote;
         panel.SetActive(true);
+        logicManager.isPromotionActive = true;
     }
 
-    public void PromotePawn(string pieceName)
+    public void Promote(string pieceType)
     {
-        int prefabIndex = -1;
-        string pieceType = "";
-        switch (pieceName)
+        if (promotingPawn == null) return;
+
+        // ��ȡ����λ�á���ɫ����Ӫ
+        Vector2 coords = promotingPawn.GetCoordinates();
+        bool isWhite = promotingPawn.IsWhite;
+        Faction faction = promotingPawn.PieceFaction; // <-- ��ȡ��Ӫ��Ϣ
+
+        // ���پɵı�
+        logicManager.DestroyPiece(promotingPawn);
+
+        // ȷ��ʹ���ĸ� Prefab ����
+        GameObject[] prefabs = (faction == Faction.Elf) ? board.ElfPiecePrefabs : board.DwarfPiecePrefabs;
+        GameObject newPiecePrefab = null;
+
+        switch (pieceType)
         {
             case "Queen":
-                prefabIndex = promotingPawn.IsWhite ? 8 : 9;
-                pieceType = "Queen";
+                newPiecePrefab = prefabs[4];
                 break;
             case "Rook":
-                prefabIndex = promotingPawn.IsWhite ? 2 : 3;
-                pieceType = "Rook";
+                newPiecePrefab = prefabs[1];
                 break;
             case "Bishop":
-                prefabIndex = promotingPawn.IsWhite ? 6 : 7;
-                pieceType = "Bishop";
+                newPiecePrefab = prefabs[3];
                 break;
             case "Knight":
-                prefabIndex = promotingPawn.IsWhite ? 4 : 5;
-                pieceType = "Knight";
+                newPiecePrefab = prefabs[2];
                 break;
         }
 
-        if (prefabIndex != -1)
+        if (newPiecePrefab != null)
         {
-            Vector3 pawnPosition = promotingPawn.transform.position;
-            Material pieceMaterial = promotingPawn.IsWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
-            board.InstantiatePiece(board.PiecePrefabs[prefabIndex], pawnPosition, pieceMaterial, pieceType, promotingPawn.IsWhite);
+            // ����������
+            Vector3 position = new Vector3(coords.x, board.pieceYOffset, coords.y);
+            Material material = isWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
 
-            Vector2 pawnCoordinates = promotingPawn.GetCoordinates();
-            board.logicManager.boardMap[(int)pawnCoordinates.x, (int)pawnCoordinates.y] = null;
-
-            Destroy(promotingPawn.gameObject);
+            // ������ �����޸ģ����������� faction ���� ������
+            board.InstantiatePiece(newPiecePrefab, position, material, pieceType, isWhite, faction);
+            // ������
         }
 
+        // ������岢�����غ�
         panel.SetActive(false);
         logicManager.isPromotionActive = false;
-        logicManager.UpdateCheckMap();
         logicManager.EndTurn();
     }
 }
