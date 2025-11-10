@@ -11,40 +11,26 @@ public class LogicManager : NetworkBehaviour
     public Square[,] squares = new Square[8, 8];
     public bool[,] whiteCheckMap = new bool[8, 8];
     public bool[,] blackCheckMap = new bool[8, 8];
-    
-    // public bool isWhiteTurn; // This will be replaced by our new system
 
     // --- NEW TURN LOGIC ---
     // This is the "source of truth" for the turn in ONLINE mode.
     // It's server-authoritative.
     private NetworkVariable<bool> m_IsWhiteTurn_Network = new NetworkVariable<bool>(true);
     
-    // This will be the "source of truth" ONLY for OFFLINE mode.
+    private bool isOfflineMode = false;
     private bool m_IsWhiteTurn_Offline = true;
-    
-    /// <summary>
-    /// This is the public property everyone will read from.
-    /// It automatically returns the correct variable for the current mode.
-    /// </summary>
+
+
     public bool IsWhiteTurn
     {
         get
         {
-            // --- FIX ---
-            // If the manager is MISSING (e.g. testing scene directly) OR the mode is Offline,
-            // use the offline variable.
-            if (GameModeManager.Instance == null || GameModeManager.Instance.CurrentMode == GameModeManager.GameMode.Offline)
-            {
+            if (isOfflineMode)
                 return m_IsWhiteTurn_Offline;
-            }
             else
-            {
-                // We are online, return the networked value
                 return m_IsWhiteTurn_Network.Value;
-            }
         }
     }
-    // --- END NEW TURN LOGIC ---
 
     public List<Piece> piecesOnBoard;
     private CameraController cameraController;
@@ -70,22 +56,21 @@ public class LogicManager : NetworkBehaviour
         promotionUI = FindFirstObjectByType<PromotionUI>();
     }
 
-    void Start()
+    public void Start()
     {
-        // This will run immediately in OFFLINE mode.
-        // In Online mode, OnNetworkSpawn() will be called shortly after.
+        cameraController = FindFirstObjectByType<CameraController>();
+        gameOverUI = FindFirstObjectByType<GameOverUI>();
+        promotionUI = FindFirstObjectByType<PromotionUI>();
 
-        // --- FIX ---
-        // We check for null OR offline mode
-        if (GameModeManager.Instance == null || GameModeManager.Instance.CurrentMode == GameModeManager.GameMode.Offline)
+        // This check is now required
+        if (GameModeManager.Instance != null && GameModeManager.Instance.CurrentMode == GameModeManager.GameMode.Offline)
         {
-            // We are offline, so OnNetworkSpawn won't run.
-            // Stop the music here and initialize.
-            if (LoginMusicManager.Instance != null)
-            {
-                LoginMusicManager.Instance.StopMusic();
-            }
-            Initialize(); // Initializes the offline turn
+            isOfflineMode = true;
+        }
+
+        if (cameraController != null)
+        {
+            cameraController.WhitePerspective();
         }
     }
 
@@ -137,107 +122,168 @@ public class LogicManager : NetworkBehaviour
         }
     }
 
-    // --- ALL THE MISSING RPCs AND METHODS ---
-
-    [ServerRpc(RequireOwnership = false)]
+        [ServerRpc(RequireOwnership = false)]
     public void RequestMoveServerRpc(int startX, int startY, int endX, int endY, ServerRpcParams rpcParams = default)
     {
-        Piece pieceToMove = boardMap[startX, startY];
+        Debug.Log($"Server: Received move request from {rpcParams.Receive.SenderClientId}");
+
+        // --- 1. Validation ---
+        Piece piece = boardMap[startX, startY];
+        if (piece == null) return;
+        Vector2 targetCoords = new Vector2(endX, endY);
+
+        // --- 2. Security & Turn Validation ---
         ulong senderClientId = rpcParams.Receive.SenderClientId;
-
-        // --- 1. Security & Turn Validation ---
-        if (pieceToMove == null)
-        {
-            Debug.LogError($"Server: Client {senderClientId} requested to move a null piece.");
-            return;
-        }
-
-        // Check 1: Is it this player's piece? (Host=0=White, Client=1=Black)
         bool isHost = senderClientId == 0;
-        bool isMyPiece = (isHost && pieceToMove.IsWhite) || (!isHost && !pieceToMove.IsWhite);
+        bool isMyPiece = (isHost && piece.IsWhite) || (!isHost && !piece.IsWhite);
         if (!isMyPiece)
         {
             Debug.LogError($"Server: Client {senderClientId} tried to move opponent's piece!");
             return;
         }
-
-        // Check 2: Is it this color's turn?
-        // Use the new public property here!
-        if (pieceToMove.IsWhite != IsWhiteTurn)
+        if (piece.IsWhite != IsWhiteTurn) // Checks m_IsWhiteTurn_Network.Value
         {
             Debug.LogError($"Server: Client {senderClientId} tried to move out of turn!");
             return;
         }
-
-        // Check 3: Is the move legal?
-        Vector2 targetPosition = new Vector2(endX, endY);
-        List<Vector2> legalMoves = pieceToMove.GetLegalMoves();
-        if (!legalMoves.Contains(targetPosition))
+        if (!piece.GetLegalMoves().Contains(targetCoords))
         {
-            Debug.LogError($"Server: Client {senderClientId} tried to make an illegal move.");
+            Debug.LogError($"Server: Client {senderClientId} sent an illegal move!");
             return;
         }
 
-        // --- 2. Execute Move ---
+        // --- 3. Execute Move ---
         bool isCapture = boardMap[endX, endY] != null;
-        bool isEnPassant = pieceToMove is Pawn &&
-                           boardMap[endX, endY] == null &&
-                           Mathf.Abs(endX - startX) == 1 &&
-                           Mathf.Abs(endY - startY) == 1;
+        bool isEnPassant = piece is Pawn &&
+           boardMap[endX, endY] == null &&
+           Mathf.Abs(endX - startX) == 1 &&
+           Mathf.Abs(endY - startY) == 1;
 
-        pieceToMove.Move(targetPosition);
-        lastMovedPiece = pieceToMove;
+        piece.Move(targetCoords);
+        MovePieceClientRpc(startX, startY, endX, endY);
+
+        lastMovedPiece = piece;
         lastMovedPieceStartPosition = new Vector2(startX, startY);
-        lastMovedPieceEndPosition = targetPosition;
+        lastMovedPieceEndPosition = targetCoords;
 
-        // --- 3. Check for Promotion ---
-        if (pieceToMove is Pawn && ((pieceToMove.IsWhite && endY == 7) || (!pieceToMove.IsWhite && endY == 0)))
-        {
-            isPromotionActive = true;
-            // Tell the specific client who made the move to show the promotion UI
-            ShowPromotionUIClientRpc(startX, startY, new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = new[] { senderClientId } } });
-        }
-        else
-        {
-            isPromotionActive = false;
-        }
+        // Sounds should be triggered by a ClientRpc, but for now, this is fine
+        if (isEnPassant && captureSound != null) { captureSound.Play(); }
+        else if (!isCapture && moveSound != null) { moveSound.Play(); }
+        else if (isCapture && captureSound != null) { captureSound.Play(); }
 
-        // --- 4. Tell ALL clients about the move ---
-        MovePieceClientRpc(startX, startY, endX, endY, isCapture, isEnPassant);
-
-        // --- 5. End Turn (if not promoting) ---
+        // --- 4. End Turn ---
         if (!isPromotionActive)
         {
             UpdateCheckMap();
-            EndTurn();
+            EndTurn(); // This will flip m_IsWhiteTurn_Network.Value
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestCastSpellServerRpc(int pieceX, int pieceY, int spellIndex, int targetX, int targetY, ServerRpcParams rpcParams = default)
+    {
+        Debug.Log($"Server: Received spell cast request from {rpcParams.Receive.SenderClientId}");
+
+        // --- 1. Validation ---
+        Piece piece = boardMap[pieceX, pieceY];
+        if (piece == null)
+        {
+            Debug.LogError("Server: Client tried to cast from a null piece.");
+            return;
+        }
+
+        if (spellIndex < 0 || spellIndex >= piece.Spells.Count)
+        {
+            Debug.LogError("Server: Client sent invalid spell index.");
+            return;
+        }
+
+        Spell spell = piece.Spells[spellIndex];
+        Vector2 targetCoords = new Vector2(targetX, targetY);
+
+        // --- 2. Security & Turn Validation ---
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+        
+        bool isHost = senderClientId == 0;
+        bool isMyPiece = (isHost && piece.IsWhite) || (!isHost && !piece.IsWhite);
+        if (!isMyPiece)
+        {
+            Debug.LogError($"Server: Client {senderClientId} tried to cast with opponent's piece!");
+            return;
+        }
+
+        if (piece.IsWhite != IsWhiteTurn)
+        {
+            Debug.LogError($"Server: Client {senderClientId} tried to cast out of turn!");
+            return;
+        }
+
+        if (!spell.CanCast())
+        {
+            Debug.LogError($"Server: Client {senderClientId} tried to cast spell, but CanCast() is false (cooldown/mana).");
+            return;
+        }
+
+        if (!spell.GetValidTargetSquares().Contains(targetCoords))
+        {
+            Debug.LogError($"Server: Client {senderClientId} tried to cast at an invalid target.");
+            return;
+        }
+
+        // --- 3. Execute Spell ---
+        Debug.Log($"Server: Executing spell '{spell.SpellName}'");
+        spell.Cast(targetCoords);
+        CastSpellClientRpc(pieceX, pieceY, spellIndex, targetX, targetY);
+        // --- 4. End Turn ---
+        if (!isPromotionActive)
+        {
+            UpdateCheckMap();
+            EndTurn(); // This flips the m_IsWhiteTurn_Network variable
         }
     }
 
     [ClientRpc]
-    private void MovePieceClientRpc(int startX, int startY, int endX, int endY, bool isCapture, bool isEnPassant, ClientRpcParams rpcParams = default)
+    private void MovePieceClientRpc(int startX, int startY, int endX, int endY)
     {
-        // Don't execute this logic on the Host/Server, it already did.
-        if (IsHost && GameModeManager.Instance.CurrentMode == GameModeManager.GameMode.Online) return;
+        // This code now runs on EVERY client (including the server)
+        Piece piece = boardMap[startX, startY];
+        if (piece == null) return; // Should not happen if validation passed
 
-        // Everyone else (clients) executes the move
-        if (boardMap[startX, startY] != null)
-        {
-            Piece pieceToMove = boardMap[startX, startY];
-            pieceToMove.Move(new Vector2(endX, endY));
+        Vector2 targetCoords = new Vector2(endX, endY);
+        
+        // --- Execute the move logic for everyone ---
+        bool isCapture = boardMap[endX, endY] != null;
+        bool isEnPassant = piece is Pawn &&
+           boardMap[endX, endY] == null &&
+           Mathf.Abs(endX - startX) == 1 &&
+           Mathf.Abs(endY - startY) == 1;
 
-            if (isEnPassant && captureSound != null)
-            {
-                captureSound.Play();
-            }
-            else if (!isCapture && moveSound != null)
-            {
-                moveSound.Play();
-            }
-            else if (isCapture && captureSound != null)
-            {
-                captureSound.Play();
-            }
-        }
+        // This moves the piece on everyone's local game
+        piece.Move(targetCoords); 
+        
+        lastMovedPiece = piece;
+        lastMovedPieceStartPosition = new Vector2(startX, startY);
+        lastMovedPieceEndPosition = targetCoords;
+
+        // Everyone plays the sound
+        if (isEnPassant && captureSound != null) { captureSound.Play(); }
+        else if (!isCapture && moveSound != null) { moveSound.Play(); }
+        else if (isCapture && captureSound != null) { captureSound.Play(); }
+    }
+
+    [ClientRpc]
+    private void CastSpellClientRpc(int pieceX, int pieceY, int spellIndex, int targetX, int targetY)
+    {
+        // This code now runs on EVERY client (including the server)
+        Piece piece = boardMap[pieceX, pieceY];
+        if (piece == null) return;
+        if (spellIndex < 0 || spellIndex >= piece.Spells.Count) return;
+
+        Spell spell = piece.Spells[spellIndex];
+        Vector2 targetCoords = new Vector2(targetX, targetY);
+
+        // This casts the spell on everyone's local game
+        spell.Cast(targetCoords);
     }
 
     [ClientRpc]
@@ -253,151 +299,22 @@ public class LogicManager : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void CompletePromotionServerRpc(int pawnX, int pawnY, string pieceType, ServerRpcParams rpcParams = default)
-    {
-        // // Security check (simplified):
-        // Pawn pawn = boardMap[pawnX, pawnY] as Pawn;
-        // if (pawn == null) return;
-        
-        // // --- 1. Destroy old pawn and create new piece ---
-        // Destroy(pawn.gameObject);
-        // boardMap[pawnX, pawnY] = null;
+    public void CompletePromotionServerRpc(int pawnX, int pawnY, string pieceType, ServerRpcParams rpcParams = default){}
 
-        // Board board = FindFirstObjectByType<Board>();
-        // GameObject prefabToSpawn = null;
-        // float yOffset = board.pieceYOffset;
-
-        // // switch (pieceType)
-        // // {
-        // //     case "Queen":
-        // //         prefabToSpawn = board.PiecePrefabs[4];
-        // //         break;
-        // //     case "Rook":
-        // //         prefabToSpawn = board.PiecePrefabs[1];
-        // //         break;
-        // //     case "Bishop":
-        // //         prefabToSpawn = board.PiecePrefabs[3];
-        // //         break;
-        // //     case "Knight":
-        // //         prefabToSpawn = board.PiecePrefabs[2];
-        // //         break;
-        // // }
-
-        // if (prefabToSpawn != null)
-        // {
-        //     Material pieceMaterial = pawn.IsWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
-        //     Vector3 position = new Vector3(pawnX, yOffset, pawnY);
-        //     // board.InstantiatePiece(prefabToSpawn, position, pieceMaterial, pieceType, pawn.IsWhite);
-        // }
-        
-        // // --- 2. Tell all clients to do the same ---
-        // CompletePromotionClientRpc(pawnX, pawnY, pieceType, pawn.IsWhite);
-
-        // // --- 3. End the turn ---
-        // isPromotionActive = false;
-        // UpdateCheckMap();
-        // EndTurn();
-    }
+    public void CompletePromotionOffline(int pawnX, int pawnY, string pieceType) { }
     
-    // --- NEW: OFFLINE Promotion Logic ---
-    /// <summary>
-    /// This is called by PromotionUI ONLY in Offline Mode.
-    /// </summary>
-    public void CompletePromotionOffline(int pawnX, int pawnY, string pieceType)
-    {
-    //     // Security check (simplified):
-    //     Pawn pawn = boardMap[pawnX, pawnY] as Pawn;
-    //     if (pawn == null) return;
-        
-    //     // --- 1. Destroy old pawn and create new piece ---
-    //     Destroy(pawn.gameObject);
-    //     boardMap[pawnX, pawnY] = null;
-
-    //     Board board = FindFirstObjectByType<Board>();
-    //     GameObject prefabToSpawn = null;
-    //     float yOffset = board.pieceYOffset;
-
-    //     // switch (pieceType)
-    //     // {
-    //     //     case "Queen":
-    //     //         prefabToSpawn = board.PiecePrefabs[4];
-    //     //         break;
-    //     //     case "Rook":
-    //     //         prefabToSpawn = board.PiecePrefabs[1];
-    //     //         break;
-    //     //     case "Bishop":
-    //     //         prefabToSpawn = board.PiecePrefabs[3];
-    //     //         break;
-    //     //     case "Knight":
-    //     //         prefabToSpawn = board.PiecePrefabs[2];
-    //     //         break;
-    //     // }
-
-    //     if (prefabToSpawn != null)
-    //     {
-    //         Material pieceMaterial = pawn.IsWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
-    //         Vector3 position = new Vector3(pawnX, yOffset, pawnY);
-    //         // board.InstantiatePiece(prefabToSpawn, position, pieceMaterial, pieceType, pawn.IsWhite);
-    //     }
-        
-    //     // --- 2. End the turn ---
-    //     // (No ClientRpc needed, just run the logic)
-    //     isPromotionActive = false;
-    //     UpdateCheckMap();
-    //     EndTurn();
-    }
-    // --- END NEW METHOD ---
-
-
     [ClientRpc]
-    private void CompletePromotionClientRpc(int pawnX, int pawnY, string pieceType, bool isWhite)
-    {
-        // // Don't execute this logic on the Host/Server, it already did.
-        // if (IsHost && GameModeManager.Instance.CurrentMode == GameModeManager.GameMode.Online) return;
-        
-        // // Destroy the old pawn
-        // if (boardMap[pawnX, pawnY] != null)
-        // {
-        //     Destroy(boardMap[pawnX, pawnY].gameObject);
-        //     boardMap[pawnX, pawnY] = null;
-        // }
-
-        // // Instantiate the new piece
-        // Board board = FindFirstObjectByType<Board>();
-        // GameObject prefabToSpawn = null;
-        // float yOffset = board.pieceYOffset;
-
-        // // switch (pieceType)
-        // // {
-        // //     case "Queen":
-        // //         prefabToSpawn = board.PiecePrefabs[4];
-        // //         break;
-        // //     case "Rook":
-        // //         prefabToSpawn = board.PiecePrefabs[1];
-        // //         break;
-        // //     case "Bishop":
-        // //         prefabToSpawn = board.PiecePrefabs[3];
-        // //         break;
-        // //     case "Knight":
-        // //         prefabToSpawn = board.PiecePrefabs[2];
-        // //         break;
-        // // }
-
-        // if (prefabToSpawn != null)
-        // {
-        //     Material pieceMaterial = isWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
-        //     Vector3 position = new Vector3(pawnX, yOffset, pawnY);
-        //     // board.InstantiatePiece(prefabToSpawn, position, pieceMaterial, pieceType, isWhite);
-        // }
-        
-        // isPromotionActive = false;
-    }
+    private void CompletePromotionClientRpc(int pawnX, int pawnY, string pieceType, bool isWhite){}
 
     // --- All your original helper methods ---
     public void Initialize()
     {
         // isWhiteTurn = true; // Old logic
         m_IsWhiteTurn_Offline = true; // Initialize the offline var
+        if (IsServer) // Only the server can set the network variable's default
+        {
+            m_IsWhiteTurn_Network.Value = true;
+        }
     }
 
     public bool IsMyTurn(bool pieceIsWhite)
@@ -406,51 +323,61 @@ public class LogicManager : NetworkBehaviour
         return pieceIsWhite == IsWhiteTurn;
     }
 
+
     public void EndTurn()
     {
-        // isWhiteTurn = !isWhiteTurn; // Old logic
-        
-        // --- NEW END TURN LOGIC ---
-        // --- FIX ---
-        // If the manager is MISSING (e.g. testing scene directly) OR the mode is Offline,
-        // use the offline logic.
-        if (GameModeManager.Instance == null || GameModeManager.Instance.CurrentMode == GameModeManager.GameMode.Offline)
+        // --- This is the new turn-flipping logic ---
+        if (isOfflineMode)
         {
-            // --- OFFLINE ---
-            // Just flip the local offline variable.
+            // In OFFLINE, just flip the local variable
             m_IsWhiteTurn_Offline = !m_IsWhiteTurn_Offline;
-            Debug.Log(m_IsWhiteTurn_Offline ? "--- OFFLINE: White's Turn ---" : "--- OFFLINE: Black's Turn ---");
-            if (isCameraRotationEnabled)
+        }
+        else
+        {
+            // In ONLINE, only the SERVER can flip the turn
+            if (IsServer)
             {
-                if (cameraController == null) cameraController = FindFirstObjectByType<CameraController>();
-                if (cameraController != null)
-                {
-                    if (IsWhiteTurn) // This will read the offline var
-                    {
-                        cameraController.WhitePerspective();
-                    }
-                    else
-                    {
-                        cameraController.BlackPerspective();
-                    }
-                }
+                m_IsWhiteTurn_Network.Value = !m_IsWhiteTurn_Network.Value;
+            }
+            else
+            {
+                // A client should never call EndTurn directly
+                Debug.LogWarning("Client tried to call EndTurn!");
+                return;
             }
         }
-        else if (IsServer) // We must be Online and Server
+        // --- End of new logic ---
+
+        // All the rest of your EndTurn logic runs for everyone
+        // (Clients will run this when they detect the network variable changed,
+        // but for now, this server-driven approach is simpler)
+        foreach (Piece piece in piecesOnBoard)
         {
-            // --- ONLINE (SERVER) ---
-            // Flip the networked variable.
-            m_IsWhiteTurn_Network.Value = !m_IsWhiteTurn_Network.Value;
+            if (piece != null)
+            {
+                piece.OnTurnStart();
+            }
         }
-        // Client does not change the turn, it waits for the server.
-        // --- END NEW LOGIC ---
 
         CheckGameOver();
         if (Time.timeScale == 0)
         {
             return;
         }
+
+        if (isCameraRotationEnabled && cameraController != null)
+        {
+            if (IsWhiteTurn) // This will use the correct property
+            {
+                cameraController.WhitePerspective();
+            }
+            else
+            {
+                cameraController.BlackPerspective();
+            }
+        }
     }
+
 
     public void UpdateCheckMap()
     {
@@ -705,7 +632,7 @@ public class LogicManager : NetworkBehaviour
             Time.timeScale = 0;
         }
     }
-    
+
     public bool HasLineOfSight(Vector2 start, Vector2 end)
     {
         // 此实现适用于直线和对角线。
@@ -744,4 +671,6 @@ public class LogicManager : NetworkBehaviour
         // 循环完成，没有障碍物
         return true;
     }
+    
+
 }
