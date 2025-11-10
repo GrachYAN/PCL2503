@@ -8,6 +8,12 @@ public abstract class Piece : MonoBehaviour
     public bool IsWhite { get; private set; }
     public string PieceType { get; private set; }
     public int HasMoved { get; private set; }
+    public Faction PieceFaction { get; private set; }
+    public int MaxHP { get; private set; }
+    public int CurrentHP { get; private set; }
+    public int MaxMana { get; private set; }
+    public int CurrentMana { get; private set; }
+    public List<Spell> Spells = new List<Spell>();
 
     public abstract List<Vector2> GetAttackedFields();
     protected abstract List<Vector2> GetPotentialMoves();
@@ -99,158 +105,116 @@ public abstract class Piece : MonoBehaviour
         return position.x >= 0 && position.x < 8 && position.y >= 0 && position.y < 8;
     }
 
-}
-
-
-/*
-using System.Collections.Generic;
-using UnityEngine;
-
-public abstract class Piece : MonoBehaviour
-{
-    protected LogicManager logicManager;
-    public bool IsWhite { get; private set; }
-    public string PieceType { get; private set; }
-    public int HasMoved { get; private set; }
-
-    public void Initialize(bool isWhite, string pieceType)
+    public void TakeDamage(int amount)
     {
-        IsWhite = isWhite;
-        PieceType = pieceType;
-        HasMoved = 0;
-        logicManager = Object.FindFirstObjectByType<LogicManager>();
-    }
+        CurrentHP -= amount;
+        Debug.Log($"{PieceType}受到了 {amount} 点伤害, 剩余HP: {CurrentHP}/{MaxHP}");
 
-    public Vector2 GetCoordinates()
-    {
-        for (int x = 0; x < 8; x++)
+        if (CurrentHP <= 0)
         {
-            for (int y = 0; y < 8; y++)
-            {
-                if (logicManager.boardMap[x, y] == this)
-                {
-                    return new Vector2(x, y);
-                }
-            }
+            CurrentHP = 0;
+            logicManager.DestroyPiece(this);
         }
-        return new Vector2(-1, -1);
     }
 
-    public virtual void Move(Vector2 newPosition)
+    public bool UseMana(int amount)
     {
-        Vector2 oldPosition = GetCoordinates();
-
-        // ✅ 吃子逻辑：检查目标位置是否有敌方棋子
-        Piece targetPiece = logicManager.boardMap[(int)newPosition.x, (int)newPosition.y];
-        if (targetPiece != null && targetPiece.IsWhite != this.IsWhite)
+        if (CurrentMana >= amount)
         {
-            Debug.Log($"🍽️ {this.PieceType}({(this.IsWhite ? "白" : "黑")}) 吃掉了 {targetPiece.PieceType}({(targetPiece.IsWhite ? "白" : "黑")})");
-
-            // ✅ 从棋盘上移除被吃的棋子
-            logicManager.piecesOnBoard.Remove(targetPiece);
-            Destroy(targetPiece.gameObject);
+            CurrentMana -= amount;
+            return true;
         }
-
-        // 更新棋盘状态
-        logicManager.boardMap[(int)oldPosition.x, (int)oldPosition.y] = null;
-        logicManager.boardMap[(int)newPosition.x, (int)newPosition.y] = this;
-
-        // 移动棋子到新位置
-        transform.position = new Vector3(newPosition.x, transform.position.y, newPosition.y);
-        HasMoved++;
-
-        Debug.Log($"✅ {PieceType}({(IsWhite ? "白" : "黑")}) 从 ({oldPosition.x},{oldPosition.y}) 移动到 ({newPosition.x},{newPosition.y})");
-    }
-
-    public List<Vector2> GetLegalMoves()
-    {
-        List<Vector2> potentialMoves = GetPotentialMoves();
-        List<Vector2> legalMoves = new List<Vector2>();
-
-        foreach (Vector2 move in potentialMoves)
-        {
-            if (IsMoveLegal(move))
-            {
-                legalMoves.Add(move);
-            }
-        }
-
-        return legalMoves;
-    }
-
-    protected abstract List<Vector2> GetPotentialMoves();
-
-    public virtual List<Vector2> GetPotentialMoves()
-    {
-        return new List<Vector2>();
-    }
-
-    private bool IsMoveLegal(Vector2 move)
-    {
-        Vector2 currentPos = GetCoordinates();
-        Piece targetPiece = logicManager.boardMap[(int)move.x, (int)move.y];
-
-        // 临时移动
-        logicManager.boardMap[(int)currentPos.x, (int)currentPos.y] = null;
-        logicManager.boardMap[(int)move.x, (int)move.y] = this;
-
-        // 检查是否会导致自己的国王被将军
-        bool wouldBeInCheck = WouldKingBeInCheck();
-
-        // 恢复棋盘状态
-        logicManager.boardMap[(int)currentPos.x, (int)currentPos.y] = this;
-        logicManager.boardMap[(int)move.x, (int)move.y] = targetPiece;
-
-        return !wouldBeInCheck;
-    }
-
-    private bool WouldKingBeInCheck()
-    {
-        // 找到己方国王
-        Piece king = null;
-        foreach (Piece piece in logicManager.piecesOnBoard)
-        {
-            if (piece != null && piece.PieceType == "King" && piece.IsWhite == this.IsWhite)
-            {
-                king = piece;
-                break;
-            }
-        }
-
-        if (king == null) return false;
-
-        Vector2 kingPos = king.GetCoordinates();
-
-        // 检查所有敌方棋子是否能攻击到国王
-        foreach (Piece piece in logicManager.piecesOnBoard)
-        {
-            if (piece != null && piece.IsWhite != this.IsWhite)
-            {
-                List<Vector2> enemyMoves = piece.GetPotentialMoves();
-                if (enemyMoves.Contains(kingPos))
-                {
-                    return true;
-                }
-            }
-        }
-
         return false;
     }
 
-    protected bool IsWithinBoard(int x, int y)
+    public void GainMana(int amount)
     {
-        return x >= 0 && x < 8 && y >= 0 && y < 8;
+        CurrentMana += amount;
+        if (CurrentMana > MaxMana) CurrentMana = MaxMana;
     }
 
-    protected bool IsSquareEmpty(int x, int y)
+    public void LoseMana(int amount)
     {
-        return logicManager.boardMap[x, y] == null;
+        CurrentMana -= amount;
+        if (CurrentMana < 0) CurrentMana = 0;
     }
 
-    protected bool IsSquareEnemy(int x, int y)
+    public virtual void OnTurnStart()
     {
-        Piece piece = logicManager.boardMap[x, y];
-        return piece != null && piece.IsWhite != this.IsWhite;
+        GainMana(1); // 每回合回蓝
+        foreach (Spell spell in Spells)
+        {
+            spell.OnTurnStart();
+        }
     }
+
+    private void SetStatsBasedOnType(string type)
+    {
+        switch (type)
+        {
+            case "Pawn": MaxHP = 8; MaxMana = 3; break;
+            case "Knight": MaxHP = 15; MaxMana = 7; break;
+            case "Rook": MaxHP = 18; MaxMana = 8; break;
+            case "Bishop": MaxHP = 12; MaxMana = 9; break;
+            case "Queen": MaxHP = 18; MaxMana = 10; break;
+            case "King": MaxHP = 24; MaxMana = 12; break;
+            default:
+                Debug.LogError("unknown: " + type);
+                MaxHP = 1; MaxMana = 0; break;
+        }
+    }
+
+    private void InitializeSpells(string type, Faction faction)
+    {
+        Spells.Clear();
+        if (logicManager == null)
+        {
+            logicManager = Object.FindFirstObjectByType<LogicManager>();
+        }
+
+        switch (faction)
+        {
+            case Faction.Elf:
+                // 精灵阵营的技能
+                switch (type)
+                {
+                    case "Pawn":
+                        // Spells.Add(new CrystallinePush()); // 示例
+                        // Spells.Add(new Drain()); // 示例
+                        break;
+                    case "Knight":
+                        Spells.Add(new HawkstriderDash());
+                        Spells.Add(new HawkCry());
+                        break;
+                    case "Bishop":
+                        Spells.Add(new ScorchingRay());
+                        break;
+                        // ... 其他精灵棋子技能
+                }
+                break;
+
+            case Faction.Dwarf:
+                // 矮人阵营的技能
+                switch (type)
+                {
+                    case "Pawn":
+                        // Spells.Add(new DwarfPawnSpell1()); // 未来添加
+                        break;
+                    case "Knight":
+                        // Spells.Add(new DwarfKnightSpell1()); // 未来添加
+                        break;
+                        // ... 其他矮人棋子技能
+                }
+                break;
+        }
+
+        // 为所有添加的技能设置施法者和逻辑管理器
+        foreach (Spell spell in Spells)
+        {
+            spell.Initialize(this, logicManager);
+        }
+    }
+
 }
-*/
+
+

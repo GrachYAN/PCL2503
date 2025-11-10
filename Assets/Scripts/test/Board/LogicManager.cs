@@ -456,60 +456,7 @@ public class LogicManager : NetworkBehaviour
         {
             return;
         }
-
-        // if (isCameraRotationEnabled)
-        // {
-        //     if (cameraController == null) cameraController = FindFirstObjectByType<CameraController>();
-        //     if (cameraController != null)
-        //     {
-        //         // --- FIX ---
-        //         // Use the new public property 'IsWhiteTurn'
-        //         if (IsWhiteTurn)
-        //         {
-        //             cameraController.WhitePerspective();
-        //         }
-        //         else
-        //         {
-        //             cameraController.BlackPerspective();
-        //         }
-        //     }
-        // }
     }
-    
-    // --- FIX ---
-    // This entire RPC is no longer needed because the NetworkVariable
-    // m_IsWhiteTurn_Network handles synchronizing the turn state.
-    // The camera logic is now handled in the NetworkVariable's OnValueChanged callback
-    // or simply by checking the property in Update().
-    // We will also remove the duplicate camera logic from EndTurn().
-    // [ClientRpc]
-    // private void EndTurnClientRpc(bool newTurn)
-    // {
-    //     if (IsHost) return; // Host already did this
-    //
-    //     isWhiteTurn = newTurn; // <--- ERROR WAS HERE
-    //     CheckGameOver();
-    //     
-    //     if (isCameraRotationEnabled)
-    //     {
-    //         if (cameraController == null) cameraController = FindFirstObjectByType<CameraController>();
-    //         if (cameraController != null)
-    //         {
-    //             if (isWhiteTurn) // <--- ERROR WAS HERE
-    //             {
-    //                 cameraController.WhitePerspective();
-    //             }
-    //             else
-    //             {
-    //                 cameraController.BlackPerspective();
-    //             }
-    //         }
-    //     }
-    // }
-    
-    // This RPC is no longer needed, NetworkVariable handles this.
-    // [ClientRpc]
-    // private void EndTurnClientRpc(bool newTurn) ...
 
     public void UpdateCheckMap()
     {
@@ -733,11 +680,35 @@ public class LogicManager : NetworkBehaviour
         moveSound.mute = !isSoundEnabled;
         captureSound.mute = !isSoundEnabled;
     }
-    
+
     public void SetSoundVolume(float volume)
     {
         soundVolume = volume;
         moveSound.volume = soundVolume;
         captureSound.volume = soundVolume;
+    }
+    
+    public void DestroyPiece(Piece piece)
+    {
+        if (piece == null) return;
+
+        Vector2 coords = piece.GetCoordinates();
+        boardMap[(int)coords.x, (int)coords.y] = null;
+
+        if (piecesOnBoard.Contains(piece))
+        {
+            piecesOnBoard.Remove(piece);
+        }
+
+        Destroy(piece.gameObject);
+        Debug.Log($"{piece.PieceType}已被摧毁。");
+
+        // TODO: 检查被摧毁的是否是 King，如果是，则游戏结束
+        if (piece is King)
+        {
+            string result = piece.IsWhite ? "Black wins" : "White wins";
+            gameOverUI.ShowGameOver(result);
+            Time.timeScale = 0;
+        }
     }
 }
