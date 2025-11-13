@@ -86,6 +86,7 @@ public class NetworkManagerUI : MonoBehaviour
         if (networkSceneManager != null && !string.IsNullOrEmpty(networkSceneManager.GameSceneName))
         {
             SceneManager.LoadScene(networkSceneManager.GameSceneName);
+            LoginMusicManager.Instance.StopMusic();
         }
         else
         {

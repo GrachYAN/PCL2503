@@ -208,7 +208,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -4491707439558410391, guid: fea5169d4627a104da63f8ac91b66292, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: -4491707439558410391, guid: fea5169d4627a104da63f8ac91b66292, type: 3}
       propertyPath: m_LocalPosition.z
@@ -631,9 +631,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boardTransform: {fileID: 514758623}
   distance: 8
-  height: 14
   angle: 50
   fieldOfView: 60
+  orbitSpeed: 120
+  zoomSpeed: 10
+  minDistance: 10
+  maxDistance: 25
+  minPitch: 20
+  maxPitch: 80
+  minHeightAboveBoard: 1
   showDebugInfo: 1
 --- !u!1 &327434573
 GameObject:
