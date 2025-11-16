@@ -32,7 +32,24 @@ public class LogicManager : NetworkBehaviour
         }
     }
 
-    public List<Piece> piecesOnBoard;
+    public List<Piece> piecesOnBoard = new List<Piece>();
+    private class RampartAura
+    {
+        public Piece Source;
+        public int RemainingRounds;
+        public int ReductionAmount;
+    }
+
+    private readonly List<RampartAura> activeRampartAuras = new List<RampartAura>();
+
+    private class HeartOfMountainBuff
+    {
+        public bool AppliesToWhite;
+        public int RemainingRounds;
+    }
+
+    private HeartOfMountainBuff whiteHeartBuff;
+    private HeartOfMountainBuff blackHeartBuff;
     private CameraController cameraController;
     private GameOverUI gameOverUI;
     private PromotionUI promotionUI;
@@ -153,12 +170,6 @@ public class LogicManager : NetworkBehaviour
         }
 
         // --- 3. Execute Move ---
-        bool isCapture = boardMap[endX, endY] != null;
-        bool isEnPassant = piece is Pawn &&
-           boardMap[endX, endY] == null &&
-           Mathf.Abs(endX - startX) == 1 &&
-           Mathf.Abs(endY - startY) == 1;
-
         piece.Move(targetCoords);
         MovePieceClientRpc(startX, startY, endX, endY);
 
@@ -166,10 +177,10 @@ public class LogicManager : NetworkBehaviour
         lastMovedPieceStartPosition = new Vector2(startX, startY);
         lastMovedPieceEndPosition = targetCoords;
 
-        // Sounds should be triggered by a ClientRpc, but for now, this is fine
-        if (isEnPassant && captureSound != null) { captureSound.Play(); }
-        else if (!isCapture && moveSound != null) { moveSound.Play(); }
-        else if (isCapture && captureSound != null) { captureSound.Play(); }
+        if (moveSound != null)
+        {
+            moveSound.Play();
+        }
 
         // --- 4. End Turn ---
         if (!isPromotionActive)
@@ -180,7 +191,7 @@ public class LogicManager : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void RequestCastSpellServerRpc(int pieceX, int pieceY, int spellIndex, int targetX, int targetY, ServerRpcParams rpcParams = default)
+    public void RequestCastSpellServerRpc(int pieceX, int pieceY, int spellIndex, SpellCastData castData, ServerRpcParams rpcParams = default)
     {
         Debug.Log($"Server: Received spell cast request from {rpcParams.Receive.SenderClientId}");
 
@@ -199,7 +210,7 @@ public class LogicManager : NetworkBehaviour
         }
 
         Spell spell = piece.Spells[spellIndex];
-        Vector2 targetCoords = new Vector2(targetX, targetY);
+        Vector2 targetCoords = new Vector2(castData.PrimaryX, castData.PrimaryY);
 
         // --- 2. Security & Turn Validation ---
         ulong senderClientId = rpcParams.Receive.SenderClientId;
@@ -224,16 +235,17 @@ public class LogicManager : NetworkBehaviour
             return;
         }
 
-        if (!spell.GetValidTargetSquares().Contains(targetCoords))
+        if (!spell.IsCastDataValid(castData))
         {
-            Debug.LogError($"Server: Client {senderClientId} tried to cast at an invalid target.");
+            Debug.LogError($"Server: Client {senderClientId} sent invalid targeting data.");
             return;
         }
 
         // --- 3. Execute Spell ---
         Debug.Log($"Server: Executing spell '{spell.SpellName}'");
+        spell.ApplyCastData(castData);
         spell.Cast(targetCoords);
-        CastSpellClientRpc(pieceX, pieceY, spellIndex, targetX, targetY);
+        CastSpellClientRpc(pieceX, pieceY, spellIndex, castData);
         // --- 4. End Turn ---
         if (!isPromotionActive)
         {
@@ -252,27 +264,21 @@ public class LogicManager : NetworkBehaviour
         Vector2 targetCoords = new Vector2(endX, endY);
         
         // --- Execute the move logic for everyone ---
-        bool isCapture = boardMap[endX, endY] != null;
-        bool isEnPassant = piece is Pawn &&
-           boardMap[endX, endY] == null &&
-           Mathf.Abs(endX - startX) == 1 &&
-           Mathf.Abs(endY - startY) == 1;
-
         // This moves the piece on everyone's local game
-        piece.Move(targetCoords); 
-        
+        piece.Move(targetCoords);
+
         lastMovedPiece = piece;
         lastMovedPieceStartPosition = new Vector2(startX, startY);
         lastMovedPieceEndPosition = targetCoords;
 
-        // Everyone plays the sound
-        if (isEnPassant && captureSound != null) { captureSound.Play(); }
-        else if (!isCapture && moveSound != null) { moveSound.Play(); }
-        else if (isCapture && captureSound != null) { captureSound.Play(); }
+        if (moveSound != null)
+        {
+            moveSound.Play();
+        }
     }
 
     [ClientRpc]
-    private void CastSpellClientRpc(int pieceX, int pieceY, int spellIndex, int targetX, int targetY)
+    private void CastSpellClientRpc(int pieceX, int pieceY, int spellIndex, SpellCastData castData)
     {
         // This code now runs on EVERY client (including the server)
         Piece piece = boardMap[pieceX, pieceY];
@@ -280,10 +286,28 @@ public class LogicManager : NetworkBehaviour
         if (spellIndex < 0 || spellIndex >= piece.Spells.Count) return;
 
         Spell spell = piece.Spells[spellIndex];
-        Vector2 targetCoords = new Vector2(targetX, targetY);
+        Vector2 targetCoords = new Vector2(castData.PrimaryX, castData.PrimaryY);
 
         // This casts the spell on everyone's local game
+        spell.ApplyCastData(castData);
         spell.Cast(targetCoords);
+    }
+
+    [ClientRpc]
+    private void SyncTurnStartClientRpc(bool isWhiteTurnPhase, bool shouldTick)
+    {
+        if (IsServer)
+        {
+            return;
+        }
+
+        RunTurnStartPhase(isWhiteTurnPhase);
+
+        if (shouldTick)
+        {
+            TickRampartAuras();
+            TickHeartOfMountainBuffs();
+        }
     }
 
     [ClientRpc]
@@ -351,12 +375,14 @@ public class LogicManager : NetworkBehaviour
         // All the rest of your EndTurn logic runs for everyone
         // (Clients will run this when they detect the network variable changed,
         // but for now, this server-driven approach is simpler)
-        foreach (Piece piece in piecesOnBoard)
+        RunTurnStartPhase(IsWhiteTurn);
+
+        TickRampartAuras();
+        TickHeartOfMountainBuffs();
+
+        if (!isOfflineMode && IsServer)
         {
-            if (piece != null)
-            {
-                piece.OnTurnStart();
-            }
+            SyncTurnStartClientRpc(IsWhiteTurn, true);
         }
 
         CheckGameOver();
@@ -630,6 +656,148 @@ public class LogicManager : NetworkBehaviour
             string result = piece.IsWhite ? "Black wins" : "White wins";
             gameOverUI.ShowGameOver(result);
             Time.timeScale = 0;
+        }
+    }
+
+    public void RegisterRampartAura(Piece source, int reductionAmount, int duration)
+    {
+        if (source == null)
+        {
+            return;
+        }
+
+        activeRampartAuras.RemoveAll(aura => aura.Source == null || aura.Source == source);
+        activeRampartAuras.Add(new RampartAura
+        {
+            Source = source,
+            RemainingRounds = duration,
+            ReductionAmount = reductionAmount
+        });
+    }
+
+    private void TickRampartAuras()
+    {
+        for (int i = activeRampartAuras.Count - 1; i >= 0; i--)
+        {
+            RampartAura aura = activeRampartAuras[i];
+            if (aura.Source == null)
+            {
+                activeRampartAuras.RemoveAt(i);
+                continue;
+            }
+
+            aura.RemainingRounds--;
+            if (aura.RemainingRounds <= 0)
+            {
+                activeRampartAuras.RemoveAt(i);
+            }
+        }
+    }
+
+    public int GetDamageReductionForPiece(Piece piece)
+    {
+        if (piece == null)
+        {
+            return 0;
+        }
+
+        Vector2 piecePos = piece.GetCoordinates();
+        int reduction = 0;
+
+        for (int i = activeRampartAuras.Count - 1; i >= 0; i--)
+        {
+            RampartAura aura = activeRampartAuras[i];
+            if (aura.Source == null)
+            {
+                activeRampartAuras.RemoveAt(i);
+                continue;
+            }
+
+            Vector2 center = aura.Source.GetCoordinates();
+            if (Mathf.Abs(center.x - piecePos.x) <= 1 && Mathf.Abs(center.y - piecePos.y) <= 1)
+            {
+                reduction += aura.ReductionAmount;
+            }
+        }
+
+        return reduction;
+    }
+
+    public void ApplyHeartOfMountainBuff(bool isWhite, int duration)
+    {
+        HeartOfMountainBuff buff = new HeartOfMountainBuff
+        {
+            AppliesToWhite = isWhite,
+            RemainingRounds = duration
+        };
+
+        if (isWhite)
+        {
+            whiteHeartBuff = buff;
+        }
+        else
+        {
+            blackHeartBuff = buff;
+        }
+
+        UpdatePiecesOnBoard();
+        foreach (Piece piece in piecesOnBoard)
+        {
+            if (piece != null && piece.IsWhite == isWhite)
+            {
+                piece.ClearRoot();
+            }
+        }
+    }
+
+    public bool HasHeartOfMountainBuff(bool isWhite)
+    {
+        HeartOfMountainBuff buff = isWhite ? whiteHeartBuff : blackHeartBuff;
+        return buff != null && buff.RemainingRounds > 0;
+    }
+
+    private void RunTurnStartPhase(bool activeTurnIsWhite)
+    {
+        UpdatePiecesOnBoard();
+        foreach (Piece piece in piecesOnBoard)
+        {
+            piece?.OnTurnStart(activeTurnIsWhite);
+        }
+    }
+
+    public void TriggerInitialTurnStartPhase()
+    {
+        if (IsClient && !IsServer)
+        {
+            return;
+        }
+
+        RunTurnStartPhase(IsWhiteTurn);
+
+        if (!isOfflineMode && IsServer)
+        {
+            SyncTurnStartClientRpc(IsWhiteTurn, false);
+        }
+    }
+
+    private void TickHeartOfMountainBuffs()
+    {
+        if (whiteHeartBuff != null)
+        {
+            whiteHeartBuff.RemainingRounds--;
+            if (whiteHeartBuff.RemainingRounds <= 0)
+            {
+                whiteHeartBuff = null;
+            }
+        }
+
+        if (blackHeartBuff != null)
+        {
+            blackHeartBuff.RemainingRounds--;
+            if (blackHeartBuff.RemainingRounds <= 0)
+            {
+                blackHeartBuff = null;
+            }
         }
     }
 

@@ -1,3 +1,4 @@
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -28,7 +29,7 @@ public class Knight : Piece
             {
                 Piece pieceAtTarget = logicManager.boardMap[(int)targetPosition.x, (int)targetPosition.y];
 
-                if (pieceAtTarget == null || pieceAtTarget.IsWhite != IsWhite)
+                if (pieceAtTarget == null)
                 {
                     legalMoves.Add(targetPosition);
                 }

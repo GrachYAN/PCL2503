@@ -1,3 +1,4 @@
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -111,7 +112,7 @@ public class King : Piece
 
             Piece pieceAtNewPosition = logicManager.boardMap[(int)newPosition.x, (int)newPosition.y];
 
-            if (pieceAtNewPosition == null || pieceAtNewPosition.IsWhite != IsWhite)
+            if (pieceAtNewPosition == null)
             {
                 legalMoves.Add(newPosition);
             }

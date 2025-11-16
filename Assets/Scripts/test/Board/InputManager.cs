@@ -32,6 +32,8 @@ public class InputManager : MonoBehaviour
     public Transform buttonsContainer;
     public Slider healthSlider;
     public Slider manaSlider;
+    public TextMeshProUGUI healthValueText;
+    public TextMeshProUGUI manaValueText;
     private RectTransform actionPanelRectTransform;
 
     // --- Online/Offline Variables ---
@@ -77,6 +79,8 @@ public class InputManager : MonoBehaviour
         }
         if (healthSlider != null) healthSlider.gameObject.SetActive(false);
         if (manaSlider != null) manaSlider.gameObject.SetActive(false);
+        if (healthValueText != null) healthValueText.gameObject.SetActive(false);
+        if (manaValueText != null) manaValueText.gameObject.SetActive(false);
     }
 
     void OnDestroy()
@@ -129,7 +133,7 @@ public class InputManager : MonoBehaviour
         if (!Physics.Raycast(ray, out RaycastHit hit))
         {
             // Clicked on empty space, reset selection
-            ResetSelection();
+            ResetSelection(currentState == InputState.CastingSpell);
             return;
         }
 
@@ -189,7 +193,7 @@ public class InputManager : MonoBehaviour
             // If we passed checks, select the piece
             if (selectedPiece == piece)
             {
-                ResetSelection();
+                ResetSelection(currentState == InputState.CastingSpell);
                 return;
             }
 
@@ -202,7 +206,7 @@ public class InputManager : MonoBehaviour
         else
         {
             // Clicked on an empty square
-            ResetSelection();
+            ResetSelection(currentState == InputState.CastingSpell);
         }
     }
 
@@ -227,6 +231,18 @@ public class InputManager : MonoBehaviour
             manaSlider.value = piece.CurrentMana;
         }
 
+        if (healthValueText != null)
+        {
+            healthValueText.gameObject.SetActive(true);
+            healthValueText.text = $"{piece.CurrentHP}/{piece.MaxHP}";
+        }
+
+        if (manaValueText != null)
+        {
+            manaValueText.gameObject.SetActive(true);
+            manaValueText.text = $"{piece.CurrentMana}/{piece.MaxMana}";
+        }
+
         GameObject moveButtonObj = Instantiate(actionButtonPrefab, buttonsContainer);
         moveButtonObj.GetComponentInChildren<TextMeshProUGUI>().text = "Move";
         moveButtonObj.GetComponent<Button>().onClick.AddListener(OnMoveButton);
@@ -247,10 +263,15 @@ public class InputManager : MonoBehaviour
         }
     }
 
-    private void ResetSelection()
+    private void ResetSelection(bool cancelSpell = false)
     {
         UnhighlightSelectedSquare();
         UnhighlightLegalMoves();
+
+        if (cancelSpell && currentState == InputState.CastingSpell && selectedSpell != null)
+        {
+            selectedSpell.CancelTargeting();
+        }
 
         selectedPiece = null;
         selectedSpell = null;
@@ -259,6 +280,8 @@ public class InputManager : MonoBehaviour
         if (actionPanel != null) actionPanel.SetActive(false);
         if (healthSlider != null) healthSlider.gameObject.SetActive(false);
         if (manaSlider != null) manaSlider.gameObject.SetActive(false);
+        if (healthValueText != null) healthValueText.gameObject.SetActive(false);
+        if (manaValueText != null) manaValueText.gameObject.SetActive(false);
     }
 
     public void OnMoveButton()
@@ -278,7 +301,17 @@ public class InputManager : MonoBehaviour
             currentState = InputState.CastingSpell;
             selectedSpell = spell;
             actionPanel.SetActive(false);
-            HighlightLegalMoves(spell.GetValidTargetSquares());
+            selectedSpell.BeginTargeting();
+            List<Vector2> targets = selectedSpell.GetCurrentValidSquares();
+            if (targets == null || targets.Count == 0)
+            {
+                selectedSpell.CancelTargeting();
+                selectedSpell = null;
+                currentState = InputState.PieceSelected;
+                ShowActionPanel(selectedPiece);
+                return;
+            }
+            HighlightLegalMoves(targets);
         }
     }
 
@@ -293,21 +326,16 @@ public class InputManager : MonoBehaviour
             if (isOfflineMode)
             {
                 // --- OFFLINE: Execute move locally ---
-                bool isCapture = logicManager.boardMap[(int)targetCoords.x, (int)targetCoords.y] != null;
-                bool isEnPassant = selectedPiece is Pawn &&
-                   logicManager.boardMap[(int)targetCoords.x, (int)targetCoords.y] == null &&
-                   Mathf.Abs(targetCoords.x - startPosition.x) == 1 &&
-                   Mathf.Abs(targetCoords.y - startPosition.y) == 1;
-
                 selectedPiece.Move(targetCoords);
-                
+
                 logicManager.lastMovedPiece = selectedPiece;
                 logicManager.lastMovedPieceStartPosition = startPosition;
                 logicManager.lastMovedPieceEndPosition = selectedPiece.GetCoordinates();
 
-                if (isEnPassant && logicManager.captureSound != null) { logicManager.captureSound.Play(); }
-                else if (!isCapture && logicManager.moveSound != null) { logicManager.moveSound.Play(); }
-                else if (isCapture && logicManager.captureSound != null) { logicManager.captureSound.Play(); }
+                if (logicManager.moveSound != null)
+                {
+                    logicManager.moveSound.Play();
+                }
                 
                 if (!logicManager.isPromotionActive)
                 {
@@ -339,10 +367,29 @@ public class InputManager : MonoBehaviour
         if (IsTargetInHighlightedList(targetCoords))
         {
             // --- !! CRITICAL ONLINE/OFFLINE BRANCH !! ---
+            if (selectedSpell == null)
+            {
+                return;
+            }
+
+            if (!selectedSpell.TryHandleTargetSelection(targetCoords, out bool castComplete))
+            {
+                return;
+            }
+
+            if (!castComplete)
+            {
+                HighlightLegalMoves(selectedSpell.GetCurrentValidSquares());
+                return;
+            }
+
+            SpellCastData castData = selectedSpell.GetCastData(targetCoords);
+
             if (isOfflineMode)
             {
-                // --- OFFLINE: Execute cast locally ---
-                selectedSpell.Cast(targetCoords);
+                selectedSpell.ApplyCastData(castData);
+                Vector2 primary = new Vector2(castData.PrimaryX, castData.PrimaryY);
+                selectedSpell.Cast(primary);
                 if (!logicManager.isPromotionActive)
                 {
                     logicManager.EndTurn();
@@ -350,31 +397,34 @@ public class InputManager : MonoBehaviour
             }
             else
             {
-                // --- ONLINE: Send RPC request to server ---
                 Vector2 pieceCoords = selectedPiece.GetCoordinates();
                 int spellIndex = selectedPiece.Spells.IndexOf(selectedSpell);
 
-                if(spellIndex == -1)
+                if (spellIndex == -1)
                 {
                     Debug.LogError("Error: Could not find spell index!");
+                    return;
                 }
-                else
-                {
-                    logicManager.RequestCastSpellServerRpc(
-                        (int)pieceCoords.x, (int)pieceCoords.y, 
-                        spellIndex, 
-                        (int)targetCoords.x, (int)targetCoords.y
-                    );
-                }
+
+                logicManager.RequestCastSpellServerRpc(
+                    (int)pieceCoords.x, (int)pieceCoords.y,
+                    spellIndex,
+                    castData
+                );
             }
             // --- !! END OF BRANCH !! ---
-            
+
             ResetSelection();
         }
         else
         {
             // Clicked outside valid moves, go back to piece selection
             currentState = InputState.PieceSelected;
+            if (selectedSpell != null)
+            {
+                selectedSpell.CancelTargeting();
+                selectedSpell = null;
+            }
             UnhighlightLegalMoves();
             ShowActionPanel(selectedPiece);
         }

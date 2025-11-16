@@ -144,6 +144,11 @@ public class Board : MonoBehaviour
 
 
         Debug.Log("棋盘摆放完成！");
+
+        if (logicManager != null)
+        {
+            logicManager.TriggerInitialTurnStartPhase();
+        }
     }
 
     // ▼▼▼ 修改 InstantiatePiece 方法以接收 Faction ▼▼▼
@@ -167,6 +172,7 @@ public class Board : MonoBehaviour
         {
             // 传递阵营信息
             piece.Initialize(pieceType, isWhite, faction);
+            piece.UpdateBoardMap();
         }
     }
     // ▲▲▲

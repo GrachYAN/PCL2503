@@ -33,10 +33,6 @@ public class Rook : Piece
                 }
                 else
                 {
-                    if (pieceAtNewPosition.IsWhite != IsWhite)
-                    {
-                        legalMoves.Add(newPosition);
-                    }
                     break;
                 }
 

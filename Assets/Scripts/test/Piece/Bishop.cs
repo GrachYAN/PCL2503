@@ -1,3 +1,4 @@
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -33,10 +34,6 @@ public class Bishop : Piece
                 }
                 else
                 {
-                    if (pieceAtNewPosition.IsWhite != IsWhite)
-                    {
-                        legalMoves.Add(newPosition);
-                    }
                     break;
                 }
 

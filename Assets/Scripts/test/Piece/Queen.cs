@@ -33,10 +33,6 @@ public class Queen : Piece
                 }
                 else
                 {
-                    if (pieceAtNewPosition.IsWhite != IsWhite)
-                    {
-                        legalMoves.Add(newPosition);
-                    }
                     break;
                 }
 

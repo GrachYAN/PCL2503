@@ -1,11 +1,16 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class PieceUIController : MonoBehaviour
 {
     [Header("UI Sliders")]
     public Slider healthSlider;
     public Slider manaSlider;
+
+    [Header("Value Labels")]
+    public TextMeshProUGUI healthText;
+    public TextMeshProUGUI manaText;
 
     [Header("跟随设置")]
     public Transform target; // UI要跟随的棋子
@@ -38,6 +43,12 @@ public class PieceUIController : MonoBehaviour
             healthSlider.gameObject.SetActive(currentHealth < maxHealth);
             healthSlider.value = currentHealth / maxHealth;
         }
+
+        if (healthText != null && maxHealth > 0)
+        {
+            healthText.gameObject.SetActive(true);
+            healthText.text = $"{Mathf.CeilToInt(currentHealth)}/{Mathf.CeilToInt(maxHealth)}";
+        }
     }
 
     // 更新法力显示
@@ -48,6 +59,12 @@ public class PieceUIController : MonoBehaviour
             // 只有在有法力时才显示法力条
             manaSlider.gameObject.SetActive(currentMana > 0);
             manaSlider.value = currentMana / maxMana;
+        }
+
+        if (manaText != null && maxMana > 0)
+        {
+            manaText.gameObject.SetActive(true);
+            manaText.text = $"{Mathf.CeilToInt(currentMana)}/{Mathf.CeilToInt(maxMana)}";
         }
     }
 }
