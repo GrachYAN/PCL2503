@@ -102,3 +102,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f9c88948a9fd314ba86480efaaff987, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  <PieceType>k__BackingField: Pawn

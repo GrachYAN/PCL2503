@@ -63,7 +63,7 @@ public class PromotionUI : MonoBehaviour
             Material material = isWhite ? board.PieceMaterials[0] : board.PieceMaterials[1];
 
             // ������ �����޸ģ����������� faction ���� ������
-            board.InstantiatePiece(newPiecePrefab, position, material, pieceType, isWhite, faction);
+            board.InstantiatePiece(newPiecePrefab, position, pieceType, isWhite, faction);
             // ������
         }
 

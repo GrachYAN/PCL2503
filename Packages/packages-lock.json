@@ -305,22 +305,6 @@
       },
       "url": "https://packages.unity.com"
     },
-    "wow-export-unityifier.briochie": {
-      "version": "file:C:/Users/傅骋昊/Downloads/wow.unity-develop/wow.unity-develop",
-      "depth": 0,
-      "source": "local",
-      "dependencies": {
-        "com.unity.nuget.newtonsoft-json": "3.2.1",
-        "com.unity.cloud.gltfast": "6.2.0",
-        "com.unity.shadergraph": "12.1.11"
-      }
-    },
-    "wu.yize.gsplat": {
-      "version": "file:C:/Users/傅骋昊/Downloads/gsplat-unity-main/gsplat-unity-main",
-      "depth": 0,
-      "source": "local",
-      "dependencies": {}
-    },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
       "depth": 0,

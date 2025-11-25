@@ -62,7 +62,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: b467931c60503694d9bf55457f7eb3de, type: 3}
       propertyPath: m_Name
-      value: Pawn
+      value: Pawn_elf
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -89,3 +89,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f9c88948a9fd314ba86480efaaff987, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  <PieceType>k__BackingField: Pawn

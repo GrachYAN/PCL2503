@@ -89,3 +89,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1ad2a3e1f5a5b24eba5494319b777aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  <PieceType>k__BackingField: Bishop

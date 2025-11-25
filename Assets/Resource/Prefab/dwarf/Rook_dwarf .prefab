@@ -92,6 +92,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 436dd9784b74072489151b256cca3456, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  <PieceType>k__BackingField: Rook
 --- !u!64 &-499840730332809344
 MeshCollider:
   m_ObjectHideFlags: 0
