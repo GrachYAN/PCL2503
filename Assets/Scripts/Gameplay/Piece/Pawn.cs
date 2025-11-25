@@ -8,10 +8,6 @@ public class Pawn : Piece
     {
         base.Move(newPosition);
 
-        if ((IsWhite && newPosition.y == 7) || (!IsWhite && newPosition.y == 0))
-        {
-            logicManager.HandlePromotion(this);
-        }
     }
     protected override List<Vector2> GetPotentialMoves()
     {

@@ -8,7 +8,7 @@ public class King : Piece
     {
         List<Vector2> legalMoves = base.GetLegalMoves();
 
-        if (HasMoved == 0 && !logicManager.CheckKingStatus())
+        if (HasMoved == 0)
         {
             if (CanCastleKingside())
             {
@@ -29,12 +29,8 @@ public class King : Piece
         Piece rook = logicManager.boardMap[7, y];
         if (rook is Rook && rook.HasMoved == 0)
         {
-            bool[,] checkMap = IsWhite ? logicManager.blackCheckMap : logicManager.whiteCheckMap;
-
             bool canCastle = logicManager.boardMap[5, y] == null &&
-                             logicManager.boardMap[6, y] == null &&
-                             !checkMap[5, y] &&
-                             !checkMap[6, y];
+                             logicManager.boardMap[6, y] == null;
             return canCastle;
         }
         return false;
@@ -45,13 +41,9 @@ public class King : Piece
         Piece rook = logicManager.boardMap[0, y];
         if (rook is Rook && rook.HasMoved == 0)
         {
-            bool[,] checkMap = IsWhite ? logicManager.blackCheckMap : logicManager.whiteCheckMap;
-
             bool canCastle = logicManager.boardMap[1, y] == null &&
                              logicManager.boardMap[2, y] == null &&
-                             logicManager.boardMap[3, y] == null &&
-                             !checkMap[2, y] &&
-                             !checkMap[3, y];
+                             logicManager.boardMap[3, y] == null;
             return canCastle;
         }
         return false;
@@ -82,15 +74,6 @@ public class King : Piece
             }
         }
         base.Move(newPosition);
-    }
-    public bool CheckForChecks()
-    {
-        Vector2 currentCoordinates = GetCoordinates();
-        bool[,] checkMap = IsWhite ? logicManager.blackCheckMap : logicManager.whiteCheckMap;
-
-        bool isInCheck = checkMap[(int)currentCoordinates.x, (int)currentCoordinates.y];
-        //Debug.Log($"Checking position ({currentCoordinates.x}, {currentCoordinates.y}) for checks: {isInCheck}");
-        return isInCheck;
     }
     protected override List<Vector2> GetPotentialMoves()
     {

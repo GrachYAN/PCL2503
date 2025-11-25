@@ -2,15 +2,6 @@
 using UnityEngine;
 using System.Linq;
 
-/* 我至今不知道我在哪里定义了这个但是他就是被定义了哭了
-public enum DamageType
-{
-    Physical,
-    Fire,
-    Arcane,
-    Holy
-}
-*/
 public abstract class Piece : MonoBehaviour
 {
     protected LogicManager logicManager;
@@ -59,10 +50,7 @@ public abstract class Piece : MonoBehaviour
 
         foreach (Vector2 move in GetPotentialMoves())
         {
-            if (WillMoveEndCheck(move))
-            {
-                legalMoves.Add(move);
-            }
+            legalMoves.Add(move);
         }
 
         if (HasHeartOfMountainBuff())
@@ -71,29 +59,6 @@ public abstract class Piece : MonoBehaviour
         }
 
         return legalMoves;
-    }
-
-    protected bool WillMoveEndCheck(Vector2 move)
-    {
-        Piece originalPiece = logicManager.boardMap[(int)move.x, (int)move.y];
-        Vector2 originalPosition = GetCoordinates();
-
-        logicManager.boardMap[(int)originalPosition.x, (int)originalPosition.y] = null;
-        logicManager.boardMap[(int)move.x, (int)move.y] = this;
-        logicManager.UpdateCheckMap();
-
-        bool isKingInCheck = logicManager.CheckKingStatus();
-
-        if (this is King)
-        {
-            isKingInCheck = IsWhite ? logicManager.blackCheckMap[(int)move.x, (int)move.y] : logicManager.whiteCheckMap[(int)move.x, (int)move.y];
-        }
-
-        logicManager.boardMap[(int)originalPosition.x, (int)originalPosition.y] = this;
-        logicManager.boardMap[(int)move.x, (int)move.y] = originalPiece;
-        logicManager.UpdateCheckMap();
-
-        return !isKingInCheck;
     }
 
     public void Initialize(string pieceType, bool isWhite)
@@ -127,7 +92,10 @@ public abstract class Piece : MonoBehaviour
 
     public Vector2 GetCoordinates()
     {
-        return new Vector2(transform.position.x, transform.position.z);
+        // Ensure board coordinates remain integral even if the transform drifts off-grid.
+        int roundedX = Mathf.RoundToInt(transform.position.x);
+        int roundedY = Mathf.RoundToInt(transform.position.z);
+        return new Vector2(roundedX, roundedY);
     }
 
     public void UpdateBoardMap()
@@ -358,11 +326,6 @@ public abstract class Piece : MonoBehaviour
 
                 Piece targetPiece = logicManager.boardMap[(int)extraPos.x, (int)extraPos.y];
                 if (targetPiece != null)
-                {
-                    continue;
-                }
-
-                if (!WillMoveEndCheck(extraPos))
                 {
                     continue;
                 }
@@ -690,4 +653,3 @@ public abstract class Piece : MonoBehaviour
     public bool IsHeartOfMountainActive => HasHeartOfMountainBuff();
 
 }
-

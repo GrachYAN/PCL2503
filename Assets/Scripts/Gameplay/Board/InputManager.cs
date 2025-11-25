@@ -1,500 +1,3 @@
-/*
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.UI;
-using TMPro;
-using UnityEngine.EventSystems;
-using Unity.Netcode;
-using System.Linq; // 需要用到 Linq
-
-public class InputManager : MonoBehaviour
-{
-    // --- State & Logic Variables ---
-    private enum InputState
-    {
-        None,
-        PieceSelected,
-        Moving,
-        CastingSpell
-    }
-    private InputState currentState = InputState.None;
-    private Piece selectedPiece;
-    private Spell selectedSpell;
-    private LogicManager logicManager;
-    private List<Square> highlightedSquares = new List<Square>();
-    private Square currentlyHighlightedSquare;
-    private InputAction clickAction;
-    private Camera mainCamera;
-
-    // --- NEW UI References (新的UI引用) ---
-    [Header("Unit Frame (Top Left)")]
-    public GameObject unitFramePanel; // 整个左上角面板
-    public Image portraitImage;       // 头像(可选)
-    public Slider healthSlider;
-    public Slider manaSlider;
-    public TextMeshProUGUI healthValueText;
-    public TextMeshProUGUI manaValueText;
-
-    [Header("Action Bar (Bottom Center)")]
-    public GameObject actionBarPanel; // 整个下方技能栏面板
-    // 我们有3个固定的槽位：1个移动，2个技能
-    public Button moveButton;
-    public Image moveButtonIcon; // 移动按钮的图标Image组件
-
-    public Button spellButton1;
-    public Image spellButton1Icon; // 技能1的图标Image组件
-
-    public Button spellButton2;
-    public Image spellButton2Icon; // 技能2的图标Image组件
-
-    [Header("Assets Library")]
-    // 这里是为了解决纯代码Spell类无法直接引用Sprite的问题
-    // 在Inspector中配置这个列表
-    public Sprite moveIcon; // 移动图标
-    public Sprite defaultSpellIcon; // 默认图标（防报错）
-    public Sprite defaultPortrait; // <--- 新增：默认头像（防白块）
-
-    public List<SpellIconData> spellIcons;
-    public List<PiecePortraitData> piecePortraits;
-
-    [System.Serializable]
-    public struct SpellIconData
-    {
-        public string SpellName; // 必须与代码中的 SpellName 完全一致 (例如 "Mind Control")
-        public Sprite Icon;
-    }
-
-    [System.Serializable]
-    public struct PiecePortraitData
-    {
-        public string PieceType; 
-        public Sprite Portrait;
-    }
-
-    // --- Online/Offline Variables ---
-    private bool isHost;
-    private bool isOfflineMode = false;
-
-    void Start()
-    {
-        logicManager = Object.FindFirstObjectByType<LogicManager>();
-        mainCamera = Camera.main;
-
-        // 1. Determine Game Mode
-        if (GameModeManager.Instance != null && GameModeManager.Instance.CurrentMode == GameModeManager.GameMode.Offline)
-        {
-            isOfflineMode = true;
-        }
-
-        if (!isOfflineMode && NetworkManager.Singleton != null)
-        {
-            isHost = NetworkManager.Singleton.IsHost;
-        }
-
-        // 2. Setup Input Action
-        clickAction = new InputAction(type: InputActionType.Button, binding: "<Mouse>/leftButton");
-        clickAction.performed += ctx => OnMouseClick();
-        clickAction.Enable();
-
-        // 3. Initial UI State (Hide everything)
-        HideUI();
-    }
-
-    void OnDestroy()
-    {
-        clickAction.Disable();
-    }
-
-    void Update()
-    {
-        // 不再需要 UpdateActionPanelPosition，因为UI现在是固定在屏幕上的
-        // 只需要实时更新血量蓝量
-        if (selectedPiece != null && unitFramePanel.activeSelf)
-        {
-            UpdateUnitFrameValues(selectedPiece);
-        }
-    }
-
-    /// <summary>
-    /// 新增：根据棋子类型查找头像
-    /// </summary>
-    private Sprite GetPortraitForPiece(string pieceType)
-    {
-        var data = piecePortraits.FirstOrDefault(x => x.PieceType == pieceType);
-        if (data.Portrait != null) return data.Portrait;
-        return defaultPortrait;
-    }
-
-
-    /// <summary>
-    /// 根据名字查找图标
-    /// </summary>
-    private Sprite GetIconForSpell(string spellName)
-    {
-        var data = spellIcons.FirstOrDefault(x => x.SpellName == spellName);
-        if (data.Icon != null) return data.Icon;
-        return defaultSpellIcon;
-    }
-
-    private void OnMouseClick()
-    {
-        // 1. UI Click Check
-        if (EventSystem.current.IsPointerOverGameObject()) return;
-
-        // 2. Promotion Check
-        if (logicManager.isPromotionActive) return;
-
-        // 3. Raycast
-        Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-        if (!Physics.Raycast(ray, out RaycastHit hit))
-        {
-            ResetSelection(currentState == InputState.CastingSpell);
-            return;
-        }
-
-        // 4. State Machine
-        switch (currentState)
-        {
-            case InputState.None:
-            case InputState.PieceSelected:
-                TrySelectPiece(hit);
-                break;
-            case InputState.Moving:
-                TryMoveToTarget(hit);
-                break;
-            case InputState.CastingSpell:
-                TryCastAtTarget(hit);
-                break;
-        }
-    }
-
-    #region ========== UNIFIED ACTION LOGIC ==========
-
-    private void TrySelectPiece(RaycastHit hit)
-    {
-        Piece piece = hit.transform.GetComponent<Piece>();
-        if (piece == null)
-        {
-            Square square = hit.transform.GetComponent<Square>();
-            if (square != null)
-            {
-                Vector2 coords = new Vector2(square.transform.position.x, square.transform.position.z);
-                piece = logicManager.boardMap[(int)coords.x, (int)coords.y];
-            }
-        }
-
-        if (piece != null)
-        {
-            // Turn & Ownership Check
-            if (!((piece.IsWhite && logicManager.IsWhiteTurn) || (!piece.IsWhite && !logicManager.IsWhiteTurn))) return;
-            if (!isOfflineMode)
-            {
-                bool isMyPiece = (isHost && piece.IsWhite) || (!isHost && !piece.IsWhite);
-                if (!isMyPiece) return;
-            }
-
-            if (selectedPiece == piece)
-            {
-                ResetSelection(currentState == InputState.CastingSpell);
-                return;
-            }
-
-            ResetSelection();
-            selectedPiece = piece;
-            currentState = InputState.PieceSelected;
-            HighlightSelectedSquare();
-
-            // --- NEW: Update Fixed UI ---
-            UpdateFixedUI(piece);
-        }
-        else
-        {
-            ResetSelection(currentState == InputState.CastingSpell);
-        }
-    }
-
-    // 新的 UI 更新逻辑
-    private void UpdateFixedUI(Piece piece)
-    {
-        // 1. 显示面板
-        unitFramePanel.SetActive(true);
-        actionBarPanel.SetActive(true);
-
-        if (portraitImage != null)
-        {
-            portraitImage.sprite = GetPortraitForPiece(piece.PieceType);
-            // 如果你希望没有头像时隐藏 Image，可以用下面这句：
-            // portraitImage.gameObject.SetActive(portraitImage.sprite != null);
-        }
-
-        // 2. 初始化数值
-        if (healthSlider != null) healthSlider.maxValue = piece.MaxHP;
-        if (manaSlider != null) manaSlider.maxValue = piece.MaxMana;
-        UpdateUnitFrameValues(piece);
-
-        // 3. 配置移动按钮 (左一槽位)
-        moveButton.onClick.RemoveAllListeners();
-        moveButton.onClick.AddListener(OnMoveButton);
-        moveButton.interactable = true;
-        if (moveButtonIcon != null) moveButtonIcon.sprite = moveIcon; // 设置移动图标
-
-        // 4. 配置技能按钮 (中间和右边槽位)
-        // 先重置/隐藏
-        spellButton1.gameObject.SetActive(false);
-        spellButton2.gameObject.SetActive(false);
-
-        // 你的设计有3个圈，左边是移动，剩下两个给技能。
-        // 大部分棋子有2个技能。
-
-        // 处理第一个技能
-        if (piece.Spells.Count > 0)
-        {
-            ConfigureSpellButton(spellButton1, spellButton1Icon, piece.Spells[0], 0);
-        }
-
-        // 处理第二个技能
-        if (piece.Spells.Count > 1)
-        {
-            ConfigureSpellButton(spellButton2, spellButton2Icon, piece.Spells[1], 1);
-        }
-    }
-
-    private void ConfigureSpellButton(Button btn, Image iconImg, Spell spell, int index)
-    {
-        btn.gameObject.SetActive(true);
-        btn.onClick.RemoveAllListeners();
-        btn.onClick.AddListener(() => OnSpellButton(index));
-
-        // 设置图标
-        if (iconImg != null)
-        {
-            iconImg.sprite = GetIconForSpell(spell.SpellName);
-        }
-
-        // 设置交互性 (蓝量/CD检查)
-        btn.interactable = spell.CanCast();
-
-        // 如果你需要显示CD遮罩，可以在这里扩展逻辑
-    }
-
-    private void UpdateUnitFrameValues(Piece piece)
-    {
-        if (healthSlider != null) healthSlider.value = piece.CurrentHP;
-        if (manaSlider != null) manaSlider.value = piece.CurrentMana;
-
-
-        // --- 文字更新 (这就是你要的功能) ---
-        if (healthValueText != null)
-            healthValueText.text = $"{piece.CurrentHP}/{piece.MaxHP}";
-
-        if (manaValueText != null)
-            manaValueText.text = $"{piece.CurrentMana}/{piece.MaxMana}";
-    }
-
-    private void HideUI()
-    {
-        if (unitFramePanel != null) unitFramePanel.SetActive(false);
-        if (actionBarPanel != null) actionBarPanel.SetActive(false);
-    }
-
-    private void ResetSelection(bool cancelSpell = false)
-    {
-        UnhighlightSelectedSquare();
-        UnhighlightLegalMoves();
-
-        if (cancelSpell && currentState == InputState.CastingSpell && selectedSpell != null)
-        {
-            selectedSpell.CancelTargeting();
-        }
-
-        selectedPiece = null;
-        selectedSpell = null;
-        currentState = InputState.None;
-
-        HideUI();
-    }
-
-    // ... (OnMoveButton, OnSpellButton, TryMoveToTarget, TryCastAtTarget 等逻辑保持不变，直接复用你原来的代码即可) ...
-
-    public void OnMoveButton()
-    {
-        if (selectedPiece == null || currentState != InputState.PieceSelected) return;
-        currentState = InputState.Moving;
-        // actionPanel.SetActive(false); // 不需要隐藏UI了
-        HighlightLegalMoves(selectedPiece.GetLegalMoves());
-    }
-
-    public void OnSpellButton(int spellIndex)
-    {
-        if (selectedPiece == null || spellIndex >= selectedPiece.Spells.Count || currentState != InputState.PieceSelected) return;
-        Spell spell = selectedPiece.Spells[spellIndex];
-        if (spell.CanCast())
-        {
-            currentState = InputState.CastingSpell;
-            selectedSpell = spell;
-            // actionPanel.SetActive(false); // 不需要隐藏UI
-            selectedSpell.BeginTargeting();
-            List<Vector2> targets = selectedSpell.GetCurrentValidSquares();
-            if (targets == null || targets.Count == 0)
-            {
-                selectedSpell.CancelTargeting();
-                selectedSpell = null;
-                currentState = InputState.PieceSelected;
-                return;
-            }
-            HighlightLegalMoves(targets);
-        }
-    }
-
-    private void TryMoveToTarget(RaycastHit hit)
-    {
-        Vector2 targetCoords = GetCoordinatesFromHit(hit);
-        if (IsTargetInHighlightedList(targetCoords))
-        {
-            Vector2 startPosition = selectedPiece.GetCoordinates();
-
-            if (isOfflineMode)
-            {
-                selectedPiece.Move(targetCoords);
-                logicManager.lastMovedPiece = selectedPiece;
-                logicManager.lastMovedPieceStartPosition = startPosition;
-                logicManager.lastMovedPieceEndPosition = selectedPiece.GetCoordinates();
-
-                if (logicManager.moveSound != null) logicManager.moveSound.Play();
-
-                if (!logicManager.isPromotionActive)
-                {
-                    logicManager.UpdateCheckMap();
-                    logicManager.EndTurn();
-                }
-            }
-            else
-            {
-                logicManager.RequestMoveServerRpc((int)startPosition.x, (int)startPosition.y, (int)targetCoords.x, (int)targetCoords.y);
-            }
-
-            ResetSelection();
-        }
-        else
-        {
-            // 取消移动，回到选中状态
-            currentState = InputState.PieceSelected;
-            UnhighlightLegalMoves();
-            // UI 保持显示
-        }
-    }
-
-    private void TryCastAtTarget(RaycastHit hit)
-    {
-        Vector2 targetCoords = GetCoordinatesFromHit(hit);
-        if (IsTargetInHighlightedList(targetCoords))
-        {
-            if (selectedSpell == null) return;
-
-            if (!selectedSpell.TryHandleTargetSelection(targetCoords, out bool castComplete)) return;
-
-            if (!castComplete)
-            {
-                HighlightLegalMoves(selectedSpell.GetCurrentValidSquares());
-                return;
-            }
-
-            SpellCastData castData = selectedSpell.GetCastData(targetCoords);
-
-            if (isOfflineMode)
-            {
-                selectedSpell.ApplyCastData(castData);
-                Vector2 primary = new Vector2(castData.PrimaryX, castData.PrimaryY);
-                selectedSpell.Cast(primary);
-                if (!logicManager.isPromotionActive) logicManager.EndTurn();
-            }
-            else
-            {
-                Vector2 pieceCoords = selectedPiece.GetCoordinates();
-                int spellIndex = selectedPiece.Spells.IndexOf(selectedSpell);
-                if (spellIndex != -1)
-                {
-                    logicManager.RequestCastSpellServerRpc((int)pieceCoords.x, (int)pieceCoords.y, spellIndex, castData);
-                }
-            }
-            ResetSelection();
-        }
-        else
-        {
-            currentState = InputState.PieceSelected;
-            if (selectedSpell != null)
-            {
-                selectedSpell.CancelTargeting();
-                selectedSpell = null;
-            }
-            UnhighlightLegalMoves();
-            // UI 保持显示
-        }
-    }
-
-    // ... GetCoordinatesFromHit, IsTargetInHighlightedList, Highlight Helper Methods 保持原样 ...
-    private Vector2 GetCoordinatesFromHit(RaycastHit hit)
-    {
-        Square targetSquare = hit.transform.GetComponent<Square>();
-        if (targetSquare != null) return new Vector2(targetSquare.transform.position.x, targetSquare.transform.position.z);
-        Piece targetPiece = hit.transform.GetComponent<Piece>();
-        if (targetPiece != null) return targetPiece.GetCoordinates();
-        return new Vector2(-1, -1);
-    }
-
-    private bool IsTargetInHighlightedList(Vector2 targetCoords)
-    {
-        if (targetCoords.x == -1) return false;
-        foreach (Square sq in highlightedSquares)
-        {
-            if (Mathf.Approximately(sq.transform.position.x, targetCoords.x) && Mathf.Approximately(sq.transform.position.z, targetCoords.y)) return true;
-        }
-        return false;
-    }
-
-    void UnhighlightSelectedSquare()
-    {
-        if (currentlyHighlightedSquare != null)
-        {
-            currentlyHighlightedSquare.Unhighlight();
-            currentlyHighlightedSquare = null;
-        }
-    }
-
-    void HighlightSelectedSquare()
-    {
-        UnhighlightSelectedSquare();
-        if (selectedPiece == null) return;
-        Vector2 pieceCoordinates = selectedPiece.GetCoordinates();
-        currentlyHighlightedSquare = logicManager.GetSquareAtPosition(pieceCoordinates);
-        if (currentlyHighlightedSquare != null) currentlyHighlightedSquare.Highlight(new Color(0f, 0.6f, 0.6f));
-    }
-
-    void HighlightLegalMoves(List<Vector2> legalMoves)
-    {
-        UnhighlightLegalMoves();
-        foreach (Vector2 move in legalMoves)
-        {
-            Square square = logicManager.GetSquareAtPosition(move);
-            if (square == null) continue;
-            Piece pieceOnSquare = logicManager.boardMap[(int)move.x, (int)move.y];
-            if (pieceOnSquare != null) square.Highlight(Color.red);
-            else square.Highlight(Color.cyan);
-            highlightedSquares.Add(square);
-        }
-    }
-
-    void UnhighlightLegalMoves()
-    {
-        foreach (Square square in highlightedSquares) if (square != null) square.Unhighlight();
-        highlightedSquares.Clear();
-    }
-
-    #endregion
-}
-*/
-
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -522,6 +25,7 @@ public class InputManager : MonoBehaviour
     private LogicManager logicManager;
     private Camera mainCamera;
     private InputAction clickAction;
+    private bool clickQueued;
 
     // --- Highlighting ---
     private List<Square> highlightedSquares = new List<Square>();
@@ -617,7 +121,7 @@ public class InputManager : MonoBehaviour
         }
 
         clickAction = new InputAction(type: InputActionType.Button, binding: "<Mouse>/leftButton");
-        clickAction.performed += ctx => OnMouseClick();
+        clickAction.performed += ctx => clickQueued = true;
         clickAction.Enable();
 
         HideUI();
@@ -636,14 +140,19 @@ public class InputManager : MonoBehaviour
             // ❌ 绝对不要在这里调用包含 Instantiate/Destroy 的方法
             UpdateSlidersAndTextOnly(selectedPiece);
         }
+
+        if (clickQueued)
+        {
+            clickQueued = false;
+            HandleMouseClick();
+        }
     }
 
     // ========================= INPUT HANDLING =========================
 
-    private void OnMouseClick()
+    private void HandleMouseClick()
     {
         if (EventSystem.current.IsPointerOverGameObject()) return;
-        if (logicManager.isPromotionActive) return;
 
         Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
         if (!Physics.Raycast(ray, out RaycastHit hit))
@@ -760,12 +269,8 @@ public class InputManager : MonoBehaviour
                 // 3. 播放音效
                 if (logicManager.moveSound != null) logicManager.moveSound.Play();
 
-                // 4. 检查是否升变 / 结束回合
-                if (!logicManager.isPromotionActive)
-                {
-                    logicManager.UpdateCheckMap();
-                    logicManager.EndTurn();
-                }
+                // 4. 结束回合
+                logicManager.EndTurn();
             }
             else
             {
@@ -819,11 +324,8 @@ public class InputManager : MonoBehaviour
                 // --- 真正执行施法的地方 ---
                 selectedSpell.Cast(primaryTarget);
 
-                // 施法后结束回合 (除非是升变状态)
-                if (!logicManager.isPromotionActive)
-                {
-                    logicManager.EndTurn();
-                }
+                // 施法后结束回合
+                logicManager.EndTurn();
             }
             else
             {

@@ -141,7 +141,6 @@ public class SettingsUI : MonoBehaviour
         {
             panel.SetActive(false);
             layoutUI.gameObject.SetActive(true);
-            logicManager.isPromotionActive = false; //enable pieces selecting
         }
     }
 
