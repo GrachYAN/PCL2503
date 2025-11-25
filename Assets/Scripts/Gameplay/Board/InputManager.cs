@@ -543,7 +543,7 @@ public class InputManager : MonoBehaviour
     public Transform buffBarContainer; // 挂载点：UnitFrame 下的 BuffContainer
     public GameObject buffIconPrefab;  // 资源：做好的 Icon Prefab
 
-    // --- 【核心修改】状态效果配置库 ---
+
     [System.Serializable]
     public struct StatusEffectData
     {
@@ -567,6 +567,12 @@ public class InputManager : MonoBehaviour
     public Image spellButton1Icon;
     public Button spellButton2;
     public Image spellButton2Icon;
+
+    [Header("Cooldown Visuals")] // 新增CD遮罩方法捏
+    public Image spellButton1CDOverlay; 
+    public TextMeshProUGUI spellButton1CDText;
+    public Image spellButton2CDOverlay; 
+    public TextMeshProUGUI spellButton2CDText; 
 
     [Header("Assets Library")]
     public Sprite dwarfMoveIcon; 
@@ -635,6 +641,47 @@ public class InputManager : MonoBehaviour
         {
             // ❌ 绝对不要在这里调用包含 Instantiate/Destroy 的方法
             UpdateSlidersAndTextOnly(selectedPiece);
+        }
+    }
+
+    /// <summary>
+    /// 更新单个技能按钮的 CD 遮罩和文字
+    /// </summary>
+    private void UpdateSpellCooldownUI(Spell spell, Image cdOverlay, TextMeshProUGUI cdText)
+    {
+        if (spell == null || cdOverlay == null) return;
+
+        // 1. 检查是否有冷却
+        if (spell.CurrentCooldown > 0)
+        {
+            // 开启遮罩
+            cdOverlay.gameObject.SetActive(true);
+
+            // 计算填充比例 (0.0 ~ 1.0)
+            // 如果 Cooldown 是 0 (防除以0错误)，则直接填满
+            float fillAmount = (spell.Cooldown > 0)
+                ? (float)spell.CurrentCooldown / spell.Cooldown
+                : 1f;
+
+            cdOverlay.fillAmount = fillAmount;
+
+            // 更新文字 (如果有)
+            if (cdText != null)
+            {
+                cdText.gameObject.SetActive(true);
+                cdText.text = spell.CurrentCooldown.ToString();
+            }
+        }
+        else
+        {
+            // 没有冷却，隐藏遮罩和文字
+            cdOverlay.gameObject.SetActive(false);
+            cdOverlay.fillAmount = 0f;
+
+            if (cdText != null)
+            {
+                cdText.gameObject.SetActive(false);
+            }
         }
     }
 
@@ -824,6 +871,14 @@ public class InputManager : MonoBehaviour
                 {
                     logicManager.EndTurn();
                 }
+
+                // --- 【新增】施法成功后，立即刷新 UI ---
+                // 这样 CD 遮罩会瞬间出现，蓝量条也会瞬间扣减
+                if (selectedPiece != null)
+                {
+                    ShowUI(selectedPiece);
+                    // 或者只调用 ConfigureActionButtons(selectedPiece); 也可以
+                }
             }
             else
             {
@@ -870,7 +925,7 @@ public class InputManager : MonoBehaviour
         unitFramePanel.SetActive(false);
         actionBarPanel.SetActive(false);
     }
-
+    
     private void ShowUI(Piece piece)
     {
         unitFramePanel.SetActive(true);
@@ -998,17 +1053,25 @@ public class InputManager : MonoBehaviour
  
             moveButtonIcon.sprite = piece.IsWhite ? dwarfMoveIcon : elfMoveIcon;
         }
-        // --- 修改结束 ---
 
         TooltipTrigger moveTrigger = moveButton.GetComponent<TooltipTrigger>();
         if (moveTrigger != null) moveTrigger.SetContent("<b>Make a movement</b>\n<size=80%>");
 
-        ConfigureSingleSpellButton(spellButton1, spellButton1Icon, piece, 0);
-        ConfigureSingleSpellButton(spellButton2, spellButton2Icon, piece, 1);
+        //ConfigureSingleSpellButton(spellButton1, spellButton1Icon, piece, 0);
+        //ConfigureSingleSpellButton(spellButton2, spellButton2Icon, piece, 1);
+
+        // 传递 CD 遮罩和文字组件
+        ConfigureSingleSpellButton(spellButton1, spellButton1Icon, spellButton1CDOverlay, spellButton1CDText, piece, 0);
+        ConfigureSingleSpellButton(spellButton2, spellButton2Icon, spellButton2CDOverlay, spellButton2CDText, piece, 1);
     }
 
-    private void ConfigureSingleSpellButton(Button btn, Image iconImg, Piece piece, int index)
+    private void ConfigureSingleSpellButton(Button btn, Image iconImg, Image cdOverlay, TextMeshProUGUI cdText, Piece piece, int index)
     {
+        // 1. 先把 CD UI 隐藏，防止没有技能时残留显示
+        if (cdOverlay != null) cdOverlay.gameObject.SetActive(false);
+        if (cdText != null) cdText.gameObject.SetActive(false);
+        //
+
         if (index >= piece.Spells.Count)
         {
             btn.gameObject.SetActive(false);
@@ -1018,12 +1081,16 @@ public class InputManager : MonoBehaviour
         Spell spell = piece.Spells[index];
 
         btn.gameObject.SetActive(true);
+        // 注意：如果正在冷却中，按钮通常也是不可点的，或者可点但提示冷却
+        // 这里我们保持 CanCast 的逻辑 (通常 CD>0 时 CanCast 返回 false)
         btn.interactable = spell.CanCast();
 
         btn.onClick.RemoveAllListeners();
         btn.onClick.AddListener(() => OnSpellButton(index));
 
         if (iconImg != null) iconImg.sprite = GetIconForSpell(spell.SpellName);
+        //调用写好的 CD 更新方法
+        UpdateSpellCooldownUI(spell, cdOverlay, cdText);
 
         TooltipTrigger trigger = btn.GetComponent<TooltipTrigger>();
       

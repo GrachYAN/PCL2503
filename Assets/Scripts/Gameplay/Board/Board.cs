@@ -329,6 +329,7 @@ public class Board : MonoBehaviour
     public void GenerateBoard()
     {
         // (材质初始化代码保持不变...)
+        /*
         if (blackSquareMaterial == null)
         {
             blackSquareMaterial = new Material(Shader.Find("Standard"));
@@ -339,6 +340,7 @@ public class Board : MonoBehaviour
             whiteSquareMaterial = new Material(Shader.Find("Standard"));
             whiteSquareMaterial.color = Color.white;
         }
+        */
 
         for (int i = 0; i < Width; i++)
         {
