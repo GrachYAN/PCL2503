@@ -1630,6 +1630,7 @@ GameObject:
   - component: {fileID: 514758623}
   - component: {fileID: 514758625}
   - component: {fileID: 514758626}
+  - component: {fileID: 514758627}
   m_Layer: 0
   m_Name: Board
   m_TagString: Untagged
@@ -1719,6 +1720,33 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
+--- !u!114 &514758627
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 514758621}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e20c24d07e60dae4ea890bf461a7f285, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  moveSound: {fileID: 8300000, guid: 4c6a007bf16ce9948be6511822077f0b, type: 3}
+  physicalDamageSound: {fileID: 8300000, guid: 30854b3c5bdae174085813374310f690, type: 3}
+  fireDamageSound: {fileID: 8300000, guid: bc84d7738659a7b40a122fc72039a218, type: 3}
+  holyDamageSound: {fileID: 8300000, guid: d4f1d5e8bcf6c984cb5ed7b15a54971b, type: 3}
+  arcaneDamageSound: {fileID: 8300000, guid: 3f60e2081ee316b4ba398e18dd40432b, type: 3}
+  notEnoughManaSound: {fileID: 8300000, guid: 8987a982720959243b0fb8316f6db7a7, type: 3}
+  cooldownNotReadySound: {fileID: 8300000, guid: 7c915bf6b298c9f488ac502b685be309, type: 3}
+  cannotTargetSound: {fileID: 8300000, guid: 5118181238be73b4ab5a5d9717d50b44, type: 3}
+  masterVolume: 0.5
+  moveVolumeMultiplier: 1
+  physicalVolumeMultiplier: 0.5
+  fireVolumeMultiplier: 1.8
+  holyVolumeMultiplier: 0.9
+  arcaneVolumeMultiplier: 0.9
+  errorVolumeMultiplier: 1
 --- !u!1 &580713362
 GameObject:
   m_ObjectHideFlags: 0
@@ -3687,7 +3715,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.21568629, g: 0.21568629, b: 0.21568629, a: 1}
+  m_Color: {r: 0.49056602, g: 0.47899607, b: 0.47899607, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

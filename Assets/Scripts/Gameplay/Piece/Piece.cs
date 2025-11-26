@@ -148,6 +148,12 @@ public abstract class Piece : MonoBehaviour
 
         HasMoved = 1;
         heartBonusTargetMap.Clear();
+
+        // Play movement sound
+        if (GameSoundManager.Instance != null)
+        {
+            GameSoundManager.Instance.PlayMoveSound();
+        }
     }
 
     private void PerformSingleStep(Vector2 sourcePosition, Vector2 targetPosition)
@@ -212,6 +218,12 @@ public abstract class Piece : MonoBehaviour
         if (amount <= 0)
         {
             return;
+        }
+
+        // Play damage type sound
+        if (GameSoundManager.Instance != null)
+        {
+            GameSoundManager.Instance.PlayDamageSound(damageType);
         }
 
         CurrentHP -= amount;

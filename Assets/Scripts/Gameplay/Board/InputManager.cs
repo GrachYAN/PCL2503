@@ -287,14 +287,42 @@ public class InputManager : MonoBehaviour
         if (selectedPiece == null || index >= selectedPiece.Spells.Count) return;
 
         Spell spell = selectedPiece.Spells[index];
-        if (spell.CanCast())
+        SpellCastFailReason failReason = spell.GetCastFailReason();
+
+        if (failReason == SpellCastFailReason.None)
         {
             currentState = InputState.CastingSpell;
             selectedSpell = spell;
             selectedSpell.BeginTargeting();
             HighlightLegalMoves(selectedSpell.GetCurrentValidSquares());
         }
+        else
+        {
+            // Play appropriate error sound based on failure reason
+            PlaySpellErrorSound(failReason);
+        }
+    }
 
+    /// <summary>
+    /// Plays the appropriate error sound based on the spell cast failure reason.
+    /// </summary>
+    private void PlaySpellErrorSound(SpellCastFailReason reason)
+    {
+        if (GameSoundManager.Instance == null) return;
+
+        switch (reason)
+        {
+            case SpellCastFailReason.NotEnoughMana:
+                GameSoundManager.Instance.PlayNotEnoughManaSound();
+                break;
+            case SpellCastFailReason.OnCooldown:
+                GameSoundManager.Instance.PlayCooldownNotReadySound();
+                break;
+            case SpellCastFailReason.InvalidTarget:
+                GameSoundManager.Instance.PlayCannotTargetSound();
+                break;
+            // Stunned and NoCaster don't need sounds (UI should prevent these)
+        }
     }
 
 
@@ -418,7 +446,9 @@ public class InputManager : MonoBehaviour
         }
         else
         {
-            // 点击了无效区域：取消施法，回到选中棋子状态
+            // 点击了无效区域：播放错误音效，取消施法，回到选中棋子状态
+            PlaySpellErrorSound(SpellCastFailReason.InvalidTarget);
+
             if (selectedSpell != null)
             {
                 selectedSpell.CancelTargeting();
@@ -591,9 +621,9 @@ public class InputManager : MonoBehaviour
         Spell spell = piece.Spells[index];
 
         btn.gameObject.SetActive(true);
-        // 注意：如果正在冷却中，按钮通常也是不可点的，或者可点但提示冷却
-        // 这里我们保持 CanCast 的逻辑 (通常 CD>0 时 CanCast 返回 false)
-        btn.interactable = spell.CanCast();
+        // Always keep button interactable so we can play error sounds when clicked
+        // Visual feedback (CD overlay, mana color) will indicate if spell is unusable
+        btn.interactable = true;
 
         btn.onClick.RemoveAllListeners();
         btn.onClick.AddListener(() => OnSpellButton(index));

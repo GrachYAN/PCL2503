@@ -3,6 +3,19 @@ using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
+/// <summary>
+/// Enum representing possible reasons a spell cannot be cast.
+/// </summary>
+public enum SpellCastFailReason
+{
+    None,           // No failure, spell can be cast
+    NotEnoughMana,  // Insufficient mana
+    OnCooldown,     // Spell is on cooldown
+    InvalidTarget,  // Target is not valid
+    Stunned,        // Caster is stunned
+    NoCaster        // No caster assigned
+}
+
 public struct SpellCastData : INetworkSerializable
 {
     public int PrimaryX;
@@ -75,15 +88,31 @@ public abstract class Spell
 
     public virtual bool CanCast()
     {
+        return GetCastFailReason() == SpellCastFailReason.None;
+    }
+
+    /// <summary>
+    /// Returns the specific reason why this spell cannot be cast, or None if it can be cast.
+    /// Priority order: NoCaster > Stunned > OnCooldown > NotEnoughMana
+    /// </summary>
+    public virtual SpellCastFailReason GetCastFailReason()
+    {
         if (Caster == null)
         {
-            return false;
+            return SpellCastFailReason.NoCaster;
         }
 
         if (Caster.IsStunned)
         {
             Debug.Log($"施法失败 {SpellName}：{Caster.PieceType} 处于眩晕状态");
-            return false;
+            return SpellCastFailReason.Stunned;
+        }
+
+        // Check cooldown FIRST (higher priority than mana)
+        if (CurrentCooldown > 0)
+        {
+            Debug.Log($"施法失败 {SpellName}：正在冷却。还需 {CurrentCooldown} 回合");
+            return SpellCastFailReason.OnCooldown;
         }
 
         int manaCost = GetEffectiveManaCost();
@@ -91,15 +120,10 @@ public abstract class Spell
         if (Caster.CurrentMana < manaCost)
         {
             Debug.Log($"施法失败 {SpellName}：法力不足。需要 {manaCost}，只有 {Caster.CurrentMana}");
-            return false;
-        }
-        if (CurrentCooldown > 0)
-        {
-            Debug.Log($"施法失败 {SpellName}：正在冷却。还需 {CurrentCooldown} 回合");
-            return false;
+            return SpellCastFailReason.NotEnoughMana;
         }
 
-        return true;
+        return SpellCastFailReason.None;
     }
 
     public abstract List<Vector2> GetValidTargetSquares();
@@ -147,8 +171,21 @@ public abstract class Spell
 
         CurrentCooldown = cooldown;
 
+        // Suppress move sound during spell execution
+        // (spells that move AND deal damage should only play damage sound)
+        if (GameSoundManager.Instance != null)
+        {
+            GameSoundManager.Instance.BeginSpellExecution();
+        }
+
         // 执行技能效果
         ExecuteEffect(targetSquare);
+
+        // Re-enable move sound after spell execution
+        if (GameSoundManager.Instance != null)
+        {
+            GameSoundManager.Instance.EndSpellExecution();
+        }
 
         Debug.Log($"{Caster.PieceType} 使用了 {SpellName}！");
 
