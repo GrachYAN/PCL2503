@@ -378,6 +378,14 @@ public class InputManager : MonoBehaviour
                     ShowUI(selectedPiece);
                     // 或者只调用 ConfigureActionButtons(selectedPiece); 也可以
                 }
+
+                // --- 【新增】施法成功后，立即刷新 UI ---
+                // 这样 CD 遮罩会瞬间出现，蓝量条也会瞬间扣减
+                if (selectedPiece != null)
+                {
+                    ShowUI(selectedPiece);
+                    // 或者只调用 ConfigureActionButtons(selectedPiece); 也可以
+                }
             }
             else
             {
@@ -424,7 +432,7 @@ public class InputManager : MonoBehaviour
         unitFramePanel.SetActive(false);
         actionBarPanel.SetActive(false);
     }
-
+    
     private void ShowUI(Piece piece)
     {
         unitFramePanel.SetActive(true);
@@ -575,6 +583,8 @@ public class InputManager : MonoBehaviour
         Spell spell = piece.Spells[index];
 
         btn.gameObject.SetActive(true);
+        // 注意：如果正在冷却中，按钮通常也是不可点的，或者可点但提示冷却
+        // 这里我们保持 CanCast 的逻辑 (通常 CD>0 时 CanCast 返回 false)
         btn.interactable = spell.CanCast();
 
         btn.onClick.RemoveAllListeners();
