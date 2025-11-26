@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
@@ -9,6 +9,7 @@ public abstract class Piece : MonoBehaviour
     [field: SerializeField] public string PieceType { get; private set; }
     public int HasMoved { get; private set; }
     public Faction PieceFaction { get; private set; }
+    public Faction ResolvedFaction { get; private set; }
     public int MaxHP { get; private set; }
     public int CurrentHP { get; private set; }
     public int MaxMana { get; private set; }
@@ -74,6 +75,7 @@ public abstract class Piece : MonoBehaviour
         this.PieceType = pieceType;
         this.IsWhite = isWhite;
         this.PieceFaction = faction; // 保存阵营信息
+        this.ResolvedFaction = ResolveFactionForAssets(faction);
         this.HasMoved = 0;
         logicManager = Object.FindFirstObjectByType<LogicManager>();
 
@@ -81,7 +83,7 @@ public abstract class Piece : MonoBehaviour
         this.CurrentHP = this.MaxHP;
         this.CurrentMana = 0;
 
-        InitializeSpells(pieceType, faction); // 传递阵营给技能初始化方法
+        InitializeSpells(pieceType); // 使用解析后的阵营为棋子配置技能
     }
 
     private void Start()
@@ -446,7 +448,19 @@ public abstract class Piece : MonoBehaviour
         }
     }
 
-    private void InitializeSpells(string type, Faction faction)
+    private Faction ResolveFactionForAssets(Faction faction)
+    {
+        switch (faction)
+        {
+            case Faction.Undead:
+            case Faction.Pandaren:
+                return Faction.Elf;
+            default:
+                return faction;
+        }
+    }
+
+    private void InitializeSpells(string type)
     {
         Spells.Clear();
         if (logicManager == null)
@@ -454,7 +468,9 @@ public abstract class Piece : MonoBehaviour
             logicManager = Object.FindFirstObjectByType<LogicManager>();
         }
 
-        switch (faction)
+        Faction resolvedFaction = ResolvedFaction;
+
+        switch (resolvedFaction)
         {
             case Faction.Elf:
                 // 精灵阵营的技能

@@ -1,3 +1,4 @@
+using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -89,10 +90,28 @@ public class NetworkSceneManager : MonoBehaviour
         // you would wait until 3 clients connect)
         
         // If we get here, clientId > 0, meaning a remote client has joined.
-        Debug.Log("A remote client has joined! Server is now loading the GameScene...");
-        NetworkManager.Singleton.SceneManager.LoadScene(GameSceneName, LoadSceneMode.Single);
+        Debug.Log("A remote client has joined! Waiting for faction selections before loading the GameScene...");
+        StartCoroutine(WaitForFactionsThenLoad());
     }
     // --- END NEW LOGIC ---
+
+    private IEnumerator WaitForFactionsThenLoad()
+    {
+        FactionSelectionManager factionSelectionManager = FindFirstObjectByType<FactionSelectionManager>();
+
+        if (factionSelectionManager == null)
+        {
+            NetworkManager.Singleton.SceneManager.LoadScene(GameSceneName, LoadSceneMode.Single);
+            yield break;
+        }
+
+        while (!factionSelectionManager.AreSelectionsReadyForOnline())
+        {
+            yield return null;
+        }
+
+        NetworkManager.Singleton.SceneManager.LoadScene(GameSceneName, LoadSceneMode.Single);
+    }
 
     private void OnClientStoppedCallback(bool reconnecting)
     {

@@ -557,7 +557,6 @@ public class InputManager : MonoBehaviour
         moveButton.onClick.AddListener(OnMoveButton);
         if (moveButtonIcon != null)
         {
- 
             moveButtonIcon.sprite = piece.IsWhite ? dwarfMoveIcon : elfMoveIcon;
         }
 

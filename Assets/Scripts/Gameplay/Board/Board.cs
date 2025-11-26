@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+﻿﻿using UnityEngine;
 
 public class Board : MonoBehaviour
 {
@@ -41,6 +41,38 @@ public class Board : MonoBehaviour
 
     [Tooltip("给黑方(Dwarf)额外增加的高度")]
     public float dwarfHeightCorrection = 0.0f;
+
+    private Faction NormalizeFaction(Faction faction)
+    {
+        switch (faction)
+        {
+            case Faction.Undead:
+            case Faction.Pandaren:
+                return Faction.Elf;
+            default:
+                return faction;
+        }
+    }
+
+    private GameObject[] GetPrefabsForFaction(Faction faction)
+    {
+        Faction resolved = NormalizeFaction(faction);
+        switch (resolved)
+        {
+            case Faction.Elf:
+                return ElfPiecePrefabs;
+            case Faction.Dwarf:
+                return DwarfPiecePrefabs;
+            default:
+                return ElfPiecePrefabs;
+        }
+    }
+
+    private float GetHeightCorrection(Faction faction)
+    {
+        Faction resolved = NormalizeFaction(faction);
+        return resolved == Faction.Dwarf ? dwarfHeightCorrection : elfHeightCorrection;
+    }
 
     void Start()
     {
@@ -94,8 +126,14 @@ public class Board : MonoBehaviour
 
     public void PlaceStartingPosition()
     {
-        // (检查 Prefab 数量的代码保持不变...)
-        if (ElfPiecePrefabs.Length < 6 || DwarfPiecePrefabs.Length < 6 || PieceMaterials.Length < 2)
+        FactionSelectionManager selectionManager = FindFirstObjectByType<FactionSelectionManager>();
+        Faction whiteFaction = NormalizeFaction(selectionManager != null ? selectionManager.GetFactionForSeat(0) : Faction.Elf);
+        Faction blackFaction = NormalizeFaction(selectionManager != null ? selectionManager.GetFactionForSeat(1) : Faction.Dwarf);
+
+        GameObject[] whitePrefabs = GetPrefabsForFaction(whiteFaction);
+        GameObject[] blackPrefabs = GetPrefabsForFaction(blackFaction);
+
+        if (whitePrefabs.Length < 6 || blackPrefabs.Length < 6 || PieceMaterials.Length < 2)
         {
             Debug.LogError("资源不足，无法生成棋子");
             return;
@@ -103,54 +141,54 @@ public class Board : MonoBehaviour
 
         // --- 1. 预先计算好双方的最终高度 ---
         // 白方高度 = 通用高度 + 白方修正
-        float elfPawnY = pawnYOffset + elfHeightCorrection;
-        float elfMajorY = pieceYOffset + elfHeightCorrection; // 如果你启用了 majorPieceYOffset，这里就用 majorPieceYOffset
+        float elfPawnY = pawnYOffset + GetHeightCorrection(whiteFaction);
+        float elfMajorY = pieceYOffset + GetHeightCorrection(whiteFaction); // 如果你启用了 majorPieceYOffset，这里就用 majorPieceYOffset
 
         // 黑方高度 = 通用高度 + 黑方修正
-        float dwarfPawnY = pawnYOffset + dwarfHeightCorrection;
-        float dwarfMajorY = pieceYOffset + dwarfHeightCorrection;
+        float dwarfPawnY = pawnYOffset + GetHeightCorrection(blackFaction);
+        float dwarfMajorY = pieceYOffset + GetHeightCorrection(blackFaction);
 
 
         // --- 放置白方阵营 (Elf) ---
         // Pawns (使用 elfPawnY)
         for (int i = 0; i < Width; i++)
         {
-            InstantiatePiece(ElfPiecePrefabs[0], GetTileCenter(i, 1, elfPawnY),"Pawn", true, Faction.Elf);
+            InstantiatePiece(whitePrefabs[0], GetTileCenter(i, 1, elfPawnY),"Pawn", true, whiteFaction);
         }
         // Rooks (使用 elfMajorY)
-        InstantiatePiece(ElfPiecePrefabs[1], GetTileCenter(0, 0, elfMajorY),"Rook", true, Faction.Elf);
-        InstantiatePiece(ElfPiecePrefabs[1], GetTileCenter(7, 0, elfMajorY),"Rook", true, Faction.Elf);
+        InstantiatePiece(whitePrefabs[1], GetTileCenter(0, 0, elfMajorY),"Rook", true, whiteFaction);
+        InstantiatePiece(whitePrefabs[1], GetTileCenter(7, 0, elfMajorY),"Rook", true, whiteFaction);
         // Knights
-        InstantiatePiece(ElfPiecePrefabs[2], GetTileCenter(1, 0, elfMajorY),"Knight", true, Faction.Elf);
-        InstantiatePiece(ElfPiecePrefabs[2], GetTileCenter(6, 0, elfMajorY),"Knight", true, Faction.Elf);
+        InstantiatePiece(whitePrefabs[2], GetTileCenter(1, 0, elfMajorY),"Knight", true, whiteFaction);
+        InstantiatePiece(whitePrefabs[2], GetTileCenter(6, 0, elfMajorY),"Knight", true, whiteFaction);
         // Bishops
-        InstantiatePiece(ElfPiecePrefabs[3], GetTileCenter(2, 0, elfMajorY),"Bishop", true, Faction.Elf);
-        InstantiatePiece(ElfPiecePrefabs[3], GetTileCenter(5, 0, elfMajorY),"Bishop", true, Faction.Elf);
+        InstantiatePiece(whitePrefabs[3], GetTileCenter(2, 0, elfMajorY),"Bishop", true, whiteFaction);
+        InstantiatePiece(whitePrefabs[3], GetTileCenter(5, 0, elfMajorY),"Bishop", true, whiteFaction);
         // Queen
-        InstantiatePiece(ElfPiecePrefabs[4], GetTileCenter(3, 0, elfMajorY),"Queen", true, Faction.Elf);
+        InstantiatePiece(whitePrefabs[4], GetTileCenter(3, 0, elfMajorY),"Queen", true, whiteFaction);
         // King
-        InstantiatePiece(ElfPiecePrefabs[5], GetTileCenter(4, 0, elfMajorY),"King", true, Faction.Elf);
+        InstantiatePiece(whitePrefabs[5], GetTileCenter(4, 0, elfMajorY),"King", true, whiteFaction);
 
 
         // --- 放置黑方阵营 (Dwarf) ---
         // Pawns (使用 dwarfPawnY)
         for (int i = 0; i < Width; i++)
         {
-            InstantiatePiece(DwarfPiecePrefabs[0], GetTileCenter(i, 6, dwarfPawnY),"Pawn", false, Faction.Dwarf);
+            InstantiatePiece(blackPrefabs[0], GetTileCenter(i, 6, dwarfPawnY),"Pawn", false, blackFaction);
         }
         // Rooks (使用 dwarfMajorY)
-        InstantiatePiece(DwarfPiecePrefabs[1], GetTileCenter(0, 7, dwarfMajorY),"Rook", false, Faction.Dwarf);
-        InstantiatePiece(DwarfPiecePrefabs[1], GetTileCenter(7, 7, dwarfMajorY),"Rook", false, Faction.Dwarf);
+        InstantiatePiece(blackPrefabs[1], GetTileCenter(0, 7, dwarfMajorY),"Rook", false, blackFaction);
+        InstantiatePiece(blackPrefabs[1], GetTileCenter(7, 7, dwarfMajorY),"Rook", false, blackFaction);
         // Knights
-        InstantiatePiece(DwarfPiecePrefabs[2], GetTileCenter(1, 7, dwarfMajorY),"Knight", false, Faction.Dwarf);
-        InstantiatePiece(DwarfPiecePrefabs[2], GetTileCenter(6, 7, dwarfMajorY),"Knight", false, Faction.Dwarf);
+        InstantiatePiece(blackPrefabs[2], GetTileCenter(1, 7, dwarfMajorY),"Knight", false, blackFaction);
+        InstantiatePiece(blackPrefabs[2], GetTileCenter(6, 7, dwarfMajorY),"Knight", false, blackFaction);
         // Bishops
-        InstantiatePiece(DwarfPiecePrefabs[3], GetTileCenter(2, 7, dwarfMajorY),"Bishop", false, Faction.Dwarf);
-        InstantiatePiece(DwarfPiecePrefabs[3], GetTileCenter(5, 7, dwarfMajorY),"Bishop", false, Faction.Dwarf);
+        InstantiatePiece(blackPrefabs[3], GetTileCenter(2, 7, dwarfMajorY),"Bishop", false, blackFaction);
+        InstantiatePiece(blackPrefabs[3], GetTileCenter(5, 7, dwarfMajorY),"Bishop", false, blackFaction);
         // Queen
-        InstantiatePiece(DwarfPiecePrefabs[4], GetTileCenter(3, 7, dwarfMajorY),"Queen", false, Faction.Dwarf);
+        InstantiatePiece(blackPrefabs[4], GetTileCenter(3, 7, dwarfMajorY),"Queen", false, blackFaction);
         // King
-        InstantiatePiece(DwarfPiecePrefabs[5], GetTileCenter(4, 7, dwarfMajorY),"King", false, Faction.Dwarf);
+        InstantiatePiece(blackPrefabs[5], GetTileCenter(4, 7, dwarfMajorY),"King", false, blackFaction);
 
         Debug.Log("棋盘摆放完成！");
         if (logicManager != null) logicManager.TriggerInitialTurnStartPhase();
@@ -189,15 +227,7 @@ public class Board : MonoBehaviour
     public GameObject FindPiecePrefab(string pieceType, Faction pieceFaction)
     {
         // 决定要在哪个预制件数组里查找
-        GameObject[] prefabsToSearch = null;
-        if (pieceFaction == Faction.Elf)
-        {
-            prefabsToSearch = ElfPiecePrefabs;
-        }
-        else if (pieceFaction == Faction.Dwarf)
-        {
-            prefabsToSearch = DwarfPiecePrefabs;
-        }
+        GameObject[] prefabsToSearch = GetPrefabsForFaction(pieceFaction);
 
         if (prefabsToSearch != null)
         {

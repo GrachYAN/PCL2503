@@ -1,7 +1,7 @@
 public enum Faction
 {
     Elf,
-    Dwarf
+    Dwarf,
+    Undead,
+    Pandaren
 }
-
- 

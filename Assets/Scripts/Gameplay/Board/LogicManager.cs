@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -517,7 +517,7 @@ public class LogicManager : NetworkBehaviour
         {
             PieceType = piece.PieceType,
             IsWhite = piece.IsWhite,
-            PieceFaction = piece.PieceFaction,
+            PieceFaction = piece.ResolvedFaction,
             DestroyedTurn = currentTurnNumber,
             MaxMana = piece.MaxMana
         };
