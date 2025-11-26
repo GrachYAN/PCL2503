@@ -12,7 +12,11 @@ public class FactionSelectionManager : NetworkBehaviour
 
     private readonly List<Faction> selectedFactions = new List<Faction>();
     private readonly Dictionary<ulong, int> clientSeatMap = new Dictionary<ulong, int>();
+    private readonly List<ulong> pendingClientOrder = new List<ulong>();
+    private ulong? activeClientSelectionId;
     private Faction? localSelection;
+
+    private bool HostHasSelection => NetworkManager.Singleton != null && clientSeatMap.ContainsKey(NetworkManager.ServerClientId) && selectedFactions.Count > 0;
 
     private void Awake()
     {
@@ -60,6 +64,8 @@ public class FactionSelectionManager : NetworkBehaviour
         expectedPlayers = Mathf.Max(1, playerCount);
         selectedFactions.Clear();
         clientSeatMap.Clear();
+        pendingClientOrder.Clear();
+        activeClientSelectionId = null;
         localSelection = null;
     }
 
@@ -115,7 +121,7 @@ public class FactionSelectionManager : NetworkBehaviour
 
         int connectedClients = NetworkManager.Singleton.ConnectedClientsIds.Count;
         int requiredPlayers = Mathf.Min(expectedPlayers, connectedClients);
-        return selectedFactions.Count >= requiredPlayers && selectedFactions.Count >= expectedPlayers;
+        return HostHasSelection && selectedFactions.Count >= requiredPlayers;
     }
 
     public Faction ResolveFaction(Faction faction)
@@ -153,6 +159,7 @@ public class FactionSelectionManager : NetworkBehaviour
 
         if (clientSeatMap.ContainsKey(NetworkManager.ServerClientId))
         {
+            Debug.Log("Host selection already registered; skipping duplicate registration.");
             return true;
         }
 
@@ -168,8 +175,49 @@ public class FactionSelectionManager : NetworkBehaviour
             selectedFactions[0] = resolved;
         }
 
+        Debug.Log($"Host selected faction {resolved}; syncing to clients and prompting next client.");
+
+        EnsurePendingClientsRegistered();
+
         SyncSelectionsClientRpc(selectedFactions.ToArray());
+
+        TryPromptNextClient();
+
         return true;
+    }
+
+    public bool HasHostSelection()
+    {
+        return HostHasSelection;
+    }
+
+    public void RegisterClientConnection(ulong clientId)
+    {
+        if (!IsServer || clientId == NetworkManager.ServerClientId)
+        {
+            return;
+        }
+
+        if (NetworkManager.Singleton != null)
+        {
+            expectedPlayers = Mathf.Max(expectedPlayers, NetworkManager.Singleton.ConnectedClientsIds.Count);
+        }
+
+        if (!pendingClientOrder.Contains(clientId) && !clientSeatMap.ContainsKey(clientId))
+        {
+            pendingClientOrder.Add(clientId);
+            Debug.Log($"Registered client {clientId} for faction selection queue.");
+        }
+
+        if (selectedFactions.Count > 0)
+        {
+            SyncSelectionsClientRpc(selectedFactions.ToArray(), new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams { TargetClientIds = new[] { clientId } }
+            });
+        }
+
+        TryPromptNextClient();
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -177,6 +225,24 @@ public class FactionSelectionManager : NetworkBehaviour
     {
         ulong senderId = rpcParams.Receive.SenderClientId;
         Faction resolved = ResolveFaction(faction);
+
+        if (!HostHasSelection && senderId != NetworkManager.ServerClientId)
+        {
+            SelectionFailedClientRpc(new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams { TargetClientIds = new[] { senderId } }
+            });
+            return;
+        }
+
+        if (activeClientSelectionId.HasValue && senderId != activeClientSelectionId.Value)
+        {
+            SelectionFailedClientRpc(new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams { TargetClientIds = new[] { senderId } }
+            });
+            return;
+        }
 
         if (IsFactionTaken(resolved) || selectedFactions.Count >= expectedPlayers)
         {
@@ -192,7 +258,19 @@ public class FactionSelectionManager : NetworkBehaviour
             clientSeatMap[senderId] = selectedFactions.Count;
         }
 
-        selectedFactions.Add(resolved);
+        if (selectedFactions.Count > clientSeatMap[senderId])
+        {
+            selectedFactions[clientSeatMap[senderId]] = resolved;
+        }
+        else
+        {
+            selectedFactions.Add(resolved);
+        }
+
+        if (activeClientSelectionId.HasValue && activeClientSelectionId.Value == senderId)
+        {
+            activeClientSelectionId = null;
+        }
 
         SyncSelectionsClientRpc(selectedFactions.ToArray());
 
@@ -200,6 +278,8 @@ public class FactionSelectionManager : NetworkBehaviour
         {
             Send = new ClientRpcSendParams { TargetClientIds = new[] { senderId } }
         });
+
+        TryPromptNextClient();
     }
 
     [ClientRpc]
@@ -212,15 +292,115 @@ public class FactionSelectionManager : NetworkBehaviour
     private void SelectionFailedClientRpc(ClientRpcParams clientRpcParams)
     {
         Debug.LogWarning("Selected faction is not available. Please choose another faction.");
+
+        NetworkManagerUI ui = FindFirstObjectByType<NetworkManagerUI>();
+        if (ui != null)
+        {
+            ui.ShowFactionError("Faction already selected or not available yet. Choose another.");
+        }
     }
 
     [ClientRpc]
-    private void SyncSelectionsClientRpc(Faction[] selections)
+    private void SyncSelectionsClientRpc(Faction[] selections, ClientRpcParams clientRpcParams = default)
     {
+        // The host (server + client) already has authoritative data; skip to avoid overwriting.
+        if (IsServer)
+        {
+            return;
+        }
+
         selectedFactions.Clear();
         foreach (Faction faction in selections)
         {
             selectedFactions.Add(ResolveFaction(faction));
+        }
+
+        Debug.Log($"[Client] Synced {selectedFactions.Count} faction(s) from host.");
+
+        // Notify UI that selections have been updated so it can refresh the display
+        NetworkManagerUI ui = FindFirstObjectByType<NetworkManagerUI>();
+        if (ui != null)
+        {
+            ui.OnFactionSelectionsUpdated(selectedFactions.Count);
+        }
+    }
+
+    [ClientRpc]
+    private void BeginClientFactionSelectionClientRpc(string prompt, ClientRpcParams clientRpcParams)
+    {
+        // The host is both server and client; skip this RPC on the host.
+        if (IsServer || IsHost)
+        {
+            return;
+        }
+
+        Debug.Log($"[Client] Received prompt from host: '{prompt}'. Showing client faction selection UI.");
+
+        NetworkManagerUI ui = FindFirstObjectByType<NetworkManagerUI>();
+        if (ui != null)
+        {
+            ui.BeginOnlineClientFactionSelection(prompt);
+        }
+    }
+
+    private void TryPromptNextClient()
+    {
+        if (!IsServer || !HostHasSelection)
+        {
+            return;
+        }
+
+        EnsurePendingClientsRegistered();
+
+        if (activeClientSelectionId.HasValue)
+        {
+            return;
+        }
+
+        if (pendingClientOrder.Count == 0)
+        {
+            Debug.Log("No pending clients to prompt for faction selection.");
+            return;
+        }
+
+        ulong nextClientId = pendingClientOrder[0];
+        pendingClientOrder.RemoveAt(0);
+        activeClientSelectionId = nextClientId;
+
+        if (!clientSeatMap.ContainsKey(nextClientId))
+        {
+            clientSeatMap[nextClientId] = selectedFactions.Count;
+        }
+
+        int seatIndex = clientSeatMap[nextClientId];
+        string prompt = seatIndex == 0 ? "Client: Choose your faction" : $"Client {seatIndex}: Choose your faction";
+
+        Debug.Log($"Prompting client {nextClientId} (seat {seatIndex}) to select a faction.");
+
+        BeginClientFactionSelectionClientRpc(prompt, new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams { TargetClientIds = new[] { nextClientId } }
+        });
+    }
+
+    private void EnsurePendingClientsRegistered()
+    {
+        if (NetworkManager.Singleton == null)
+        {
+            return;
+        }
+
+        foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
+        {
+            if (clientId == NetworkManager.ServerClientId)
+            {
+                continue;
+            }
+
+            if (!pendingClientOrder.Contains(clientId) && !clientSeatMap.ContainsKey(clientId))
+            {
+                pendingClientOrder.Add(clientId);
+            }
         }
     }
 }

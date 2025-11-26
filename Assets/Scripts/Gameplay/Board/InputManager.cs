@@ -75,17 +75,19 @@ public class InputManager : MonoBehaviour
     [Header("Cooldown Visuals")] // 新增CD遮罩方法捏
     public Image spellButton1CDOverlay; 
     public TextMeshProUGUI spellButton1CDText;
-    public Image spellButton2CDOverlay; 
+    public Image spellButton2CDOverlay;
     public TextMeshProUGUI spellButton2CDText;
 
     [Header("Assets Library")]
-    public Sprite dwarfMoveIcon; 
-    public Sprite elfMoveIcon;   
+    public Sprite dwarfMoveIcon;
+    public Sprite elfMoveIcon;
+    public Sprite defaultMoveIcon;
     public Sprite defaultSpellIcon;
     public Sprite defaultPortrait;
 
     public List<SpellIconData> spellIcons;
     public List<PiecePortraitData> piecePortraits;
+    public List<FactionMoveIconData> factionMoveIcons;
 
     [System.Serializable]
     public struct SpellIconData
@@ -101,6 +103,13 @@ public class InputManager : MonoBehaviour
         public string PieceType;
         public Faction faction;
         public Sprite Portrait;
+    }
+
+    [System.Serializable]
+    public struct FactionMoveIconData
+    {
+        public Faction faction;
+        public Sprite icon;
     }
 
     // --- Online/Offline Variables ---
@@ -557,7 +566,7 @@ public class InputManager : MonoBehaviour
         moveButton.onClick.AddListener(OnMoveButton);
         if (moveButtonIcon != null)
         {
-            moveButtonIcon.sprite = piece.IsWhite ? dwarfMoveIcon : elfMoveIcon;
+            moveButtonIcon.sprite = GetMoveIconForFaction(piece.ResolvedFaction);
         }
 
         TooltipTrigger moveTrigger = moveButton.GetComponent<TooltipTrigger>();
@@ -615,6 +624,41 @@ public class InputManager : MonoBehaviour
         currentState = InputState.None;
 
         HideUI();
+    }
+
+    private Sprite GetMoveIconForFaction(Faction faction)
+    {
+        Faction resolvedFaction = FactionSelectionManager.Instance != null
+            ? FactionSelectionManager.Instance.ResolveFaction(faction)
+            : faction;
+
+        Sprite icon = null;
+
+        if (factionMoveIcons != null && factionMoveIcons.Count > 0)
+        {
+            icon = factionMoveIcons.FirstOrDefault(data => data.faction == resolvedFaction).icon;
+        }
+
+        if (icon == null)
+        {
+            switch (resolvedFaction)
+            {
+                case Faction.Dwarf:
+                    icon = dwarfMoveIcon;
+                    break;
+                case Faction.Elf:
+                default:
+                    icon = elfMoveIcon != null ? elfMoveIcon : defaultMoveIcon;
+                    break;
+            }
+        }
+
+        if (icon == null)
+        {
+            icon = defaultMoveIcon;
+        }
+
+        return icon;
     }
 
     private Sprite GetPortraitForPiece(Piece piece)

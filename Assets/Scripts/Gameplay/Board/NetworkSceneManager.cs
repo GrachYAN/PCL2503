@@ -71,27 +71,52 @@ public class NetworkSceneManager : MonoBehaviour
     /// <param name="clientId">The ID of the client that just connected.</param>
     private void OnClientConnected(ulong clientId)
     {
-        // This check is redundant since the callback only runs on the server, but it's safe.
-        if (!NetworkManager.Singleton.IsServer) return;
-
-        Debug.Log($"Client {clientId} has connected to the server.");
-
-        // The host's own client ID is 0 (NetworkManager.ServerClientId).
-        // We only want to load the scene when an *actual* remote client joins (clientId > 0).
-        if (clientId == NetworkManager.ServerClientId)
+        if (NetworkManager.Singleton == null)
         {
-            Debug.Log("Host's own client connected. Waiting for a remote client...");
-            return; // This is just the host connecting to itself. Do nothing.
+            return;
         }
 
-        // The host's own client ID is 0. Any *other* client will have a different ID.
-        // As soon as a real client joins, we load the scene.
-        // (This assumes a 2-player game. If you wanted a 4-player lobby,
-        // you would wait until 3 clients connect)
-        
-        // If we get here, clientId > 0, meaning a remote client has joined.
-        Debug.Log("A remote client has joined! Waiting for faction selections before loading the GameScene...");
-        StartCoroutine(WaitForFactionsThenLoad());
+        // Host branch
+        if (NetworkManager.Singleton.IsServer)
+        {
+            Debug.Log($"Client {clientId} has connected to the server.");
+
+            if (clientId == NetworkManager.ServerClientId)
+            {
+                Debug.Log("Host's own client connected. Waiting for a remote client...");
+                return;
+            }
+
+            Debug.Log("A remote client has joined! Waiting for faction selections before loading the GameScene...");
+
+            FactionSelectionManager factionSelectionManager = FindFirstObjectByType<FactionSelectionManager>();
+            if (factionSelectionManager != null)
+            {
+                factionSelectionManager.RegisterClientConnection(clientId);
+            }
+
+            if (networkManagerUI != null)
+            {
+                if (factionSelectionManager != null && factionSelectionManager.HasHostSelection())
+                {
+                    networkManagerUI.ShowHostWaitingForClientSelection();
+                }
+                else
+                {
+                    networkManagerUI.BeginOnlineHostFactionSelection();
+                }
+            }
+
+            StartCoroutine(WaitForFactionsThenLoad());
+        }
+        else if (clientId == NetworkManager.Singleton.LocalClientId)
+        {
+            // Client branch - only react to the event for our own client connection
+            if (networkManagerUI != null)
+            {
+                networkManagerUI.ShowClientWaitingForHost();
+            }
+        }
     }
     // --- END NEW LOGIC ---
 

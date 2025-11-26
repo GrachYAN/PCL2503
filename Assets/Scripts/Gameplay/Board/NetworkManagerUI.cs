@@ -48,7 +48,8 @@ public class NetworkManagerUI : MonoBehaviour
     {
         None,
         Offline,
-        Online
+        OnlineHost,
+        OnlineClient
     }
 
     private FactionSelectionManager factionSelectionManager;
@@ -101,10 +102,93 @@ public class NetworkManagerUI : MonoBehaviour
         factionSelectPanel.SetActive(false);
     }
 
+    public void BeginOnlineHostFactionSelection()
+    {
+        if (factionSelectionManager != null && factionSelectionManager.GetSelectionCount() == 0)
+        {
+            factionSelectionManager.ResetSelections(2);
+        }
+
+        BeginFactionSelection(FactionSelectionContext.OnlineHost);
+    }
+
+    public void BeginOnlineClientFactionSelection(string promptOverride = null)
+    {
+        BeginFactionSelection(FactionSelectionContext.OnlineClient);
+
+        if (!string.IsNullOrEmpty(promptOverride))
+        {
+            factionPromptText.text = promptOverride;
+        }
+    }
+
+    public void ShowClientWaitingForHost()
+    {
+        factionSelectPanel.SetActive(false);
+        hostWaitingPanel.SetActive(true);
+        joinGamePanel.SetActive(false);
+        waitingForPlayerText.text = "Waiting for host to choose a faction...";
+        currentFactionContext = FactionSelectionContext.None;
+    }
+
+    public void ShowHostWaitingForClientSelection()
+    {
+        factionSelectPanel.SetActive(false);
+        hostWaitingPanel.SetActive(true);
+        waitingForPlayerText.text = "Waiting for client to choose a faction...";
+        currentFactionContext = FactionSelectionContext.None;
+    }
+
+    public void ShowFactionError(string message)
+    {
+        factionErrorText.text = message;
+        factionErrorText.gameObject.SetActive(true);
+    }
+
+    /// <summary>
+    /// Called by FactionSelectionManager when faction selections are synced from the host.
+    /// Updates the UI to reflect the current state (e.g., show that host has selected).
+    /// </summary>
+    public void OnFactionSelectionsUpdated(int selectionCount)
+    {
+        Debug.Log($"[NetworkManagerUI] Faction selections updated. Count: {selectionCount}");
+
+        // If host has selected (selectionCount >= 1) and we're a client waiting, update UI
+        if (currentFactionContext == FactionSelectionContext.None && selectionCount > 0)
+        {
+            // Host has made a selection; client should see this reflected
+            if (hostWaitingPanel.activeSelf && waitingForPlayerText != null)
+            {
+                waitingForPlayerText.text = $"Host selected. {selectionCount} faction(s) chosen. Waiting for your turn...";
+            }
+        }
+
+        // Refresh faction button states to show which factions are taken
+        RefreshFactionButtonStates();
+    }
+
+    /// <summary>
+    /// Refreshes faction button interactability based on which factions are already taken.
+    /// </summary>
+    private void RefreshFactionButtonStates()
+    {
+        if (factionSelectionManager == null) return;
+
+        // Disable buttons for factions that are already taken
+        if (bloodElfButton != null)
+            bloodElfButton.interactable = !factionSelectionManager.IsFactionTaken(Faction.Elf);
+        if (dwarfButton != null)
+            dwarfButton.interactable = !factionSelectionManager.IsFactionTaken(Faction.Dwarf);
+        if (undeadButton != null)
+            undeadButton.interactable = !factionSelectionManager.IsFactionTaken(Faction.Undead);
+        if (pandarenButton != null)
+            pandarenButton.interactable = !factionSelectionManager.IsFactionTaken(Faction.Pandaren);
+    }
+
     private void OnOnlineModeClicked()
     {
         GameModeManager.Instance.SetMode(GameModeManager.GameMode.Online);
-        BeginFactionSelection(FactionSelectionContext.Online);
+        ShowMainPanel();
     }
 
     private void OnOfflineModeClicked()
@@ -129,11 +213,6 @@ public class NetworkManagerUI : MonoBehaviour
     /// </summary>
     private void OnStartHostClicked()
     {
-        if (!EnsureHostFactionSelected())
-        {
-            return;
-        }
-
         mainPanel.SetActive(false);
         hostWaitingPanel.SetActive(true);
         joinGamePanel.SetActive(false);
@@ -144,9 +223,9 @@ public class NetworkManagerUI : MonoBehaviour
 
         if (factionSelectionManager != null)
         {
+            factionSelectionManager.ResetSelections(2);
             factionSelectionManager.SetExpectedPlayers(2);
             factionSelectionManager.EnsureNetworkObjectSpawned();
-            factionSelectionManager.RegisterHostSelection();
         }
     }
 
@@ -156,11 +235,6 @@ public class NetworkManagerUI : MonoBehaviour
     /// </summary>
     private void OnJoinGameClicked()
     {
-        if (!EnsureClientFactionSelected())
-        {
-            return;
-        }
-
         mainPanel.SetActive(false);
         hostWaitingPanel.SetActive(false);
         joinGamePanel.SetActive(true);
@@ -262,9 +336,11 @@ public class NetworkManagerUI : MonoBehaviour
                 offlineSelectionIndex = 0;
                 factionPromptText.text = "Player 1: Choose your faction";
                 break;
-            case FactionSelectionContext.Online:
-                factionSelectionManager.ResetSelections(2);
+            case FactionSelectionContext.OnlineHost:
                 factionPromptText.text = "Host: Choose your faction";
+                break;
+            case FactionSelectionContext.OnlineClient:
+                factionPromptText.text = "Client: Choose your faction";
                 break;
             default:
                 break;
@@ -275,6 +351,9 @@ public class NetworkManagerUI : MonoBehaviour
         hostWaitingPanel.SetActive(false);
         joinGamePanel.SetActive(false);
         factionSelectPanel.SetActive(true);
+
+        // Refresh button states to disable already-taken factions
+        RefreshFactionButtonStates();
     }
 
     private void OnFactionButtonClicked(Faction faction)
@@ -284,32 +363,59 @@ public class NetworkManagerUI : MonoBehaviour
             return;
         }
 
-        bool success = factionSelectionManager.TrySelectFaction(faction);
-        if (!success)
-        {
-            factionErrorText.text = "Faction already selected. Choose another.";
-            return;
-        }
+        bool success = false;
 
-        factionErrorText.text = string.Empty;
+        switch (currentFactionContext)
+        {
+            case FactionSelectionContext.Offline:
+                success = factionSelectionManager.TrySelectFaction(faction);
+                if (!success)
+                {
+                    factionErrorText.text = "Faction already selected. Choose another.";
+                    return;
+                }
 
-        if (currentFactionContext == FactionSelectionContext.Offline)
-        {
-            offlineSelectionIndex++;
-            if (offlineSelectionIndex >= 2)
-            {
-                StartOfflineGame();
-            }
-            else
-            {
-                factionPromptText.text = $"Player {offlineSelectionIndex + 1}: Choose your faction";
-            }
-        }
-        else if (currentFactionContext == FactionSelectionContext.Online)
-        {
-            factionSelectPanel.SetActive(false);
-            ShowMainPanel();
-            currentFactionContext = FactionSelectionContext.None;
+                factionErrorText.text = string.Empty;
+                offlineSelectionIndex++;
+                if (offlineSelectionIndex >= 2)
+                {
+                    StartOfflineGame();
+                }
+                else
+                {
+                    factionPromptText.text = $"Player {offlineSelectionIndex + 1}: Choose your faction";
+                }
+                break;
+            case FactionSelectionContext.OnlineHost:
+                success = factionSelectionManager.TrySelectFaction(faction);
+                if (!success)
+                {
+                    factionErrorText.text = "Faction already selected. Choose another.";
+                    return;
+                }
+
+                if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+                {
+                    factionSelectionManager.RegisterHostSelection();
+                }
+
+                hostWaitingPanel.SetActive(true);
+                factionSelectPanel.SetActive(false);
+                hostWaitingPanel.SetActive(true);
+                waitingForPlayerText.text = "Waiting for client to choose a faction...";
+                currentFactionContext = FactionSelectionContext.None;
+                break;
+            case FactionSelectionContext.OnlineClient:
+                success = true;
+                factionSelectionManager.SubmitFactionServerRpc(faction);
+                factionSelectPanel.SetActive(false);
+                currentFactionContext = FactionSelectionContext.None;
+                hostWaitingPanel.SetActive(true);
+                waitingForPlayerText.text = "Waiting for host to start the game...";
+                break;
+            default:
+                factionErrorText.text = "Please choose a mode first.";
+                break;
         }
     }
 
@@ -324,40 +430,6 @@ public class NetworkManagerUI : MonoBehaviour
         {
             Debug.LogError("GameSceneName is not set in NetworkSceneManager! Cannot load game.");
         }
-    }
-
-    private bool EnsureHostFactionSelected()
-    {
-        if (factionSelectionManager == null)
-        {
-            return true;
-        }
-
-        if (!factionSelectionManager.HasSelectionForSeat(0))
-        {
-            BeginFactionSelection(FactionSelectionContext.Online);
-            factionErrorText.text = "Host must choose a faction before hosting.";
-            return false;
-        }
-
-        return true;
-    }
-
-    private bool EnsureClientFactionSelected()
-    {
-        if (factionSelectionManager == null)
-        {
-            return true;
-        }
-
-        if (factionSelectionManager.GetSelectionCount() == 0)
-        {
-            BeginFactionSelection(FactionSelectionContext.Online);
-            factionPromptText.text = "Client: Choose your faction";
-            return false;
-        }
-
-        return true;
     }
 
     // --- Public Methods for NetworkSceneManager ---
