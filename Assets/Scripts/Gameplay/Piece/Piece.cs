@@ -267,6 +267,7 @@ public abstract class Piece : MonoBehaviour
         if (CurrentMana < 0) CurrentMana = 0;
     }
 
+    /* 旧代码回合判断有误，判断了两次
     public virtual void OnTurnStart(bool activeTurnIsWhite)
     {
         bool shouldGainMana = logicManager == null || IsWhite == activeTurnIsWhite;
@@ -291,6 +292,44 @@ public abstract class Piece : MonoBehaviour
         {
             spell.OnTurnStart();
         }
+    }
+    */
+
+    public virtual void OnTurnStart(bool activeTurnIsWhite)
+    {
+        // 1. 判断当前是否是“我”的回合
+        // 如果 logicManager 为空（单机测试）或者 棋子颜色与当前回合颜色一致
+        bool isMyTurn = logicManager == null || IsWhite == activeTurnIsWhite;
+
+        // --- 只有在自己的回合才执行以下逻辑 ---
+        if (isMyTurn)
+        {
+            // 1. 回蓝
+            GainMana(1);
+
+            // 2. 状态持续时间扣减 (眩晕/定身)
+            // 如果你不加 isMyTurn 判断，对手走一步你的眩晕就减一层，你走一步又减一层，控制时间会减半
+            if (stunDuration > 0)
+            {
+                stunDuration--;
+            }
+
+            if (rootDuration > 0)
+            {
+                rootDuration--;
+            }
+
+            // 3. 技能冷却扣减 (修复核心问题)
+            foreach (Spell spell in Spells)
+            {
+                spell.OnTurnStart();
+            }
+
+            // 4. 处理持续伤害 (DoT)
+            // 通常 DoT 也是在自己回合开始时结算
+            ResolveDamageOverTime();
+        }
+
     }
 
     private void ResolveDamageOverTime()
