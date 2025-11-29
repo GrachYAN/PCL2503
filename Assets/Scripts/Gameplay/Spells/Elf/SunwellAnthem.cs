@@ -15,7 +15,15 @@ public class SunwellAnthem : Spell
     public override List<Vector2> GetValidTargetSquares()
     {
         // Party-wide buff, no target needed.
-        return new List<Vector2>();
+
+        List<Vector2> validSquares = new List<Vector2>();
+
+        if (Caster != null)
+        {
+            validSquares.Add(Caster.GetCoordinates());
+        }
+
+        return validSquares;
     }
 
     protected override void ExecuteEffect(Vector2 targetSquare)

@@ -15,7 +15,14 @@ public class SunwellWard : Spell
     public override List<Vector2> GetValidTargetSquares()
     {
         // Self-cast aura, no specific target squares needed.
-        return new List<Vector2>();
+        List<Vector2> validSquares = new List<Vector2>();
+
+        if (Caster != null)
+        {
+            validSquares.Add(Caster.GetCoordinates());
+        }
+
+        return validSquares;
     }
 
     protected override void ExecuteEffect(Vector2 targetSquare)

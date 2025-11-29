@@ -77,6 +77,9 @@ public class CameraController : MonoBehaviour
 
     void Update()
     {
+        // 1. 如果时间暂停，禁止操作
+        if (Time.timeScale == 0f) return;
+
         if (boardTransform == null) return;
 
         HandlePerspectiveToggle();

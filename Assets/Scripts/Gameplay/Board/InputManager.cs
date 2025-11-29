@@ -205,6 +205,9 @@ public class InputManager : MonoBehaviour
 
     private void HandleMouseClick()
     {
+
+        if (Time.timeScale == 0f) return;
+
         if (EventSystem.current.IsPointerOverGameObject()) return;
 
         Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
@@ -559,8 +562,9 @@ public class InputManager : MonoBehaviour
         // if (piece.IsArcaneCorroded) TryAddStatusIcon("Arcane");
 
         // 5. 特殊 Buff
-        if (piece.IsProtectedBySunwell) TryAddStatusIcon("SunwellWard"); // 记得在 Inspector 里添加 ID 为 "SunwellWard" 的配置
-        if (piece.IsHeartOfMountainActive) TryAddStatusIcon("HeartOfMountain"); // 记得添加 ID 为 "HeartOfMountain" 的配置
+        if (piece.IsProtectedBySunwell) TryAddStatusIcon("Sunwell Ward"); // 记得在 Inspector 里添加 ID 为 "SunwellWard" 的配置
+        if (piece.IsHeartOfMountainActive) TryAddStatusIcon("Heart of the Mountain"); // 记得添加 ID 为 "HeartOfMountain" 的配置
+        if (piece.HasSunwellAnthemBuff) TryAddStatusIcon("Sunwell Anthem");
     }
 
 

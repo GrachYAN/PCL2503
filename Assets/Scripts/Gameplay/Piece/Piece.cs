@@ -220,6 +220,13 @@ public abstract class Piece : MonoBehaviour
             return;
         }
 
+        //简单特效
+        if (VFXManager.Instance != null)
+        {
+            // 在当前棋子的位置播放对应类型的特效
+            VFXManager.Instance.PlayImpactVFX(this.transform.position, damageType);
+        }
+
         // Play damage type sound
         if (GameSoundManager.Instance != null)
         {
@@ -718,5 +725,19 @@ public abstract class Piece : MonoBehaviour
 
     // 山丘之心 (Heart of Mountain) - 包装原本的 protected 方法
     public bool IsHeartOfMountainActive => HasHeartOfMountainBuff();
+
+    public bool HasSunwellAnthemBuff
+    {
+        get
+        {
+            // 这是一个全队 Buff，通常存储在 LogicManager 中
+            // 我们查询 LogicManager：当前阵营是否有这个 Buff
+            if (logicManager != null)
+            {
+                return logicManager.HasSunwellAnthem(this.IsWhite);
+            }
+            return false;
+        }
+    }
 
 }
