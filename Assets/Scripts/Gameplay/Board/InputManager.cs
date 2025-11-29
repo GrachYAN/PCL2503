@@ -605,7 +605,7 @@ public class InputManager : MonoBehaviour
         ConfigureSingleSpellButton(spellButton1, spellButton1Icon, spellButton1CDOverlay, spellButton1CDText, piece, 0);
         ConfigureSingleSpellButton(spellButton2, spellButton2Icon, spellButton2CDOverlay, spellButton2CDText, piece, 1);
     }
-
+    /*
     private void ConfigureSingleSpellButton(Button btn, Image iconImg, Image cdOverlay, TextMeshProUGUI cdText,Piece piece, int index)
     {
         // 1. 先把 CD UI 隐藏，防止没有技能时残留显示
@@ -639,6 +639,66 @@ public class InputManager : MonoBehaviour
         }
         
     }
+    */
+    private void ConfigureSingleSpellButton(Button btn, Image iconImg, Image cdOverlay, TextMeshProUGUI cdText, Piece piece, int index)
+    {
+        // 1. 初始化隐藏 CD 遮罩
+        if (cdOverlay != null) cdOverlay.gameObject.SetActive(false);
+        if (cdText != null) cdText.gameObject.SetActive(false);
+
+        if (index >= piece.Spells.Count)
+        {
+            btn.gameObject.SetActive(false);
+            return;
+        }
+
+        Spell spell = piece.Spells[index];
+
+        btn.gameObject.SetActive(true);
+        // 【关键】保持按钮可交互，这样点击才能播放错误音效
+        btn.interactable = true;
+
+        btn.onClick.RemoveAllListeners();
+        btn.onClick.AddListener(() => OnSpellButton(index));
+
+        if (iconImg != null)
+        {
+            iconImg.sprite = GetIconForSpell(spell.SpellName);
+
+            // ========================= 核心修改：手动应用颜色 =========================
+
+            // 1. 获取你在 Inspector 里设置的颜色配置
+            // 这样你以后想改颜色，直接在 Unity 编辑器里改 Button 的 Disabled Color 即可，不用改代码
+            var colors = btn.colors;
+
+            // 2. 判断是否缺蓝
+            if (piece.CurrentMana < spell.ManaCost)
+            {
+                // 缺蓝：手动把图标染成你在 Inspector 里设置的 "Disabled Color"
+                // 注意：因为 Button 是 Tint 模式，这里修改 Image 颜色会和 Button 的 Normal Color 叠加
+                // 只要 Normal Color 是白色，这里就会显示你设置的紫色
+                iconImg.color = colors.disabledColor;
+            }
+            else
+            {
+                // 蓝量充足：恢复白色（原色）
+                iconImg.color = Color.white;
+            }
+            // ====================================================================
+        }
+
+        UpdateSpellCooldownUI(spell, cdOverlay, cdText);
+
+        TooltipTrigger trigger = btn.GetComponent<TooltipTrigger>();
+        if (trigger != null)
+        {
+            // 顺便把 Tooltip 里的蓝量消耗也变成红色，提示更明显
+            string manaColor = (piece.CurrentMana < spell.ManaCost) ? "#ff4444" : "#4287f5";
+            string desc = $"<b>{spell.SpellName}</b> <size=80%><color={manaColor}>({spell.ManaCost} Mana)</color></size>\nCD: {spell.Cooldown} Turn(s)\n{spell.Description}";
+            trigger.SetContent(desc);
+        }
+    }
+
 
     // ========================= HELPER METHODS =========================
 
