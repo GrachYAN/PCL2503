@@ -182,6 +182,11 @@ public class GameSoundManager : MonoBehaviour
         {
             Debug.LogWarning("[GameSoundManager] Not enough mana sound clip is not assigned!");
         }
+
+        if (GameNotificationManager.Instance != null)
+        {
+            GameNotificationManager.Instance.ShowSystemMessage("I do not have enough mana.", false); // ºìÉ«
+        }
     }
 
     /// <summary>
@@ -197,6 +202,11 @@ public class GameSoundManager : MonoBehaviour
         {
             Debug.LogWarning("[GameSoundManager] Cooldown not ready sound clip is not assigned!");
         }
+
+        if (GameNotificationManager.Instance != null)
+        {
+            GameNotificationManager.Instance.ShowSystemMessage("This spell is not ready yet.", true); // »ÆÉ«
+        }
     }
 
     /// <summary>
@@ -211,6 +221,11 @@ public class GameSoundManager : MonoBehaviour
         else
         {
             Debug.LogWarning("[GameSoundManager] Cannot target sound clip is not assigned!");
+        }
+
+        if (GameNotificationManager.Instance != null)
+        {
+            GameNotificationManager.Instance.ShowSystemMessage("I cannot target that", false); // ºìÉ«
         }
     }
 
