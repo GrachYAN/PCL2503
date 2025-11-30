@@ -198,7 +198,10 @@ public abstract class Piece : MonoBehaviour
 
         if (logicManager != null && logicManager.IsPieceProtectedBySunwellWard(this))
         {
-            Debug.Log($"{PieceType} is protected by Sunwell Ward and takes no damage.");
+            Debug.Log($"{PieceType} is protected by Sunwell Ward and takes no damage.");  //这个之后要插UI
+
+            GameNotificationManager.Instance.ShowDamageText(transform.position, 0, damageType);
+
             return; // 免疫伤害
         }
 
@@ -220,7 +223,7 @@ public abstract class Piece : MonoBehaviour
             return;
         }
 
-        //简单特效
+        //简单特效 这个我还没做捏
         if (VFXManager.Instance != null)
         {
             // 在当前棋子的位置播放对应类型的特效
@@ -231,6 +234,12 @@ public abstract class Piece : MonoBehaviour
         if (GameSoundManager.Instance != null)
         {
             GameSoundManager.Instance.PlayDamageSound(damageType);
+
+            if (GameNotificationManager.Instance != null)
+            {
+                GameNotificationManager.Instance.ShowDamageText(this.transform.position, amount, damageType);
+            }
+            // --
         }
 
         CurrentHP -= amount;
