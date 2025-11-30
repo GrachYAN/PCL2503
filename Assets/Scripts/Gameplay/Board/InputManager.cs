@@ -249,13 +249,19 @@ public class InputManager : MonoBehaviour
 
         if (piece != null)
         {
-            if (!((piece.IsWhite && logicManager.IsWhiteTurn) || (!piece.IsWhite && !logicManager.IsWhiteTurn))) return;
+            //if (!((piece.IsWhite && logicManager.IsWhiteTurn) || (!piece.IsWhite && !logicManager.IsWhiteTurn))) return;
+
+            // 1. 判断是否拥有控制权 (是我的回合 + 是我的棋子)
+            bool isMyTurn = (piece.IsWhite && logicManager.IsWhiteTurn) || (!piece.IsWhite && !logicManager.IsWhiteTurn);
+            bool isMyPiece = true; // 默认单机模式为 true
 
             if (!isOfflineMode)
             {
-                bool isMyPiece = (isHost && piece.IsWhite) || (!isHost && !piece.IsWhite);
-                if (!isMyPiece) return;
+                isMyPiece = (isHost && piece.IsWhite) || (!isHost && !piece.IsWhite);
+                //if (!isMyPiece) return;
             }
+
+            bool canControl = isMyTurn && isMyPiece;
 
             if (selectedPiece == piece)
             {
@@ -268,7 +274,8 @@ public class InputManager : MonoBehaviour
             currentState = InputState.PieceSelected;
 
             HighlightSelectedSquare();
-            ShowUI(selectedPiece);
+            //ShowUI(selectedPiece);
+            ShowUI(selectedPiece, canControl);
         }
         else
         {
@@ -415,7 +422,7 @@ public class InputManager : MonoBehaviour
                 // 这样 CD 遮罩会瞬间出现，蓝量条也会瞬间扣减
                 if (selectedPiece != null)
                 {
-                    ShowUI(selectedPiece);
+                    ShowUI(selectedPiece,true);
                     // 或者只调用 ConfigureActionButtons(selectedPiece); 也可以
                 }
 
@@ -423,7 +430,7 @@ public class InputManager : MonoBehaviour
                 // 这样 CD 遮罩会瞬间出现，蓝量条也会瞬间扣减
                 if (selectedPiece != null)
                 {
-                    ShowUI(selectedPiece);
+                    ShowUI(selectedPiece,true);
                     // 或者只调用 ConfigureActionButtons(selectedPiece); 也可以
                 }
             }
@@ -475,10 +482,11 @@ public class InputManager : MonoBehaviour
         actionBarPanel.SetActive(false);
     }
     
-    private void ShowUI(Piece piece)
+    private void ShowUI(Piece piece, bool canControl)
     {
         unitFramePanel.SetActive(true);
-        actionBarPanel.SetActive(true);
+        //actionBarPanel.SetActive(true);
+        actionBarPanel.SetActive(canControl);
 
         // 1. 设置头像 (只设置一次)
         if (portraitImage != null) portraitImage.sprite = GetPortraitForPiece(piece);
@@ -491,7 +499,11 @@ public class InputManager : MonoBehaviour
         UpdateStatusIcons(piece);
 
         // 4. 配置按钮
-        ConfigureActionButtons(piece);
+        //ConfigureActionButtons(piece);
+        if (canControl)
+        {
+            ConfigureActionButtons(piece);
+        }
     }
 
     private void UpdateSlidersAndTextOnly(Piece piece)
