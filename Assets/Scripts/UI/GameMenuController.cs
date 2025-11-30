@@ -12,6 +12,17 @@ public class GameMenuController : MonoBehaviour
     [Header("游戏状态")]
     public bool isPaused = false;
 
+    void Start()
+    {
+        // 强制在游戏开始时解除暂停。这修复了从其他场景加载可能带来的 TimeScale = 0 的问题。
+        Time.timeScale = 1f;
+        isPaused = false;
+        if (pauseMenuPanel != null)
+        {
+            pauseMenuPanel.SetActive(false);
+        }
+    }
+
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
