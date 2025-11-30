@@ -1803,40 +1803,52 @@ MonoBehaviour:
     Icon: {fileID: 21300000, guid: e93994954ed65ab46a6b25db8e850856, type: 3}
   piecePortraits:
   - PieceType: Pawn
-    faction: 0
+    DisplayName: Deepforge Sentry
+    faction: 1
     Portrait: {fileID: 21300000, guid: 1a8fd9d27d9b7554dbfd9a3baf961741, type: 3}
   - PieceType: Knight
-    faction: 0
+    DisplayName: Ram Rider Hussar
+    faction: 1
     Portrait: {fileID: 21300000, guid: e13f01a28049a6c4381ceafe31ed33b1, type: 3}
   - PieceType: Rook
-    faction: 0
+    DisplayName: Stonevault Bastion
+    faction: 1
     Portrait: {fileID: 21300000, guid: bb3e5a5b7a1cf334f852e37647b64ba4, type: 3}
   - PieceType: Bishop
-    faction: 0
+    DisplayName: Lightbound Priestess
+    faction: 1
     Portrait: {fileID: 21300000, guid: 3a8ec56f4a20cfb4fb9a3c0fd3fb2f15, type: 3}
   - PieceType: Queen
-    faction: 0
+    DisplayName: Skycrest Gryphon
+    faction: 1
     Portrait: {fileID: 21300000, guid: 386088a72caec7848ba45f93c9366dba, type: 3}
   - PieceType: King
-    faction: 0
+    DisplayName: Magni Bronzebeard
+    faction: 1
     Portrait: {fileID: 21300000, guid: a4a626fbbc4a11e4dbebc371783036f4, type: 3}
   - PieceType: Pawn
-    faction: 1
+    DisplayName: Sunwell Acolyte
+    faction: 0
     Portrait: {fileID: 21300000, guid: 2c666535d06c48c44ae7165e483a37cd, type: 3}
   - PieceType: Rook
-    faction: 1
+    DisplayName: Runed Sunspire
+    faction: 0
     Portrait: {fileID: 21300000, guid: ac0eb1420e986664db24305fdde05369, type: 3}
   - PieceType: Bishop
-    faction: 1
+    DisplayName: Spellweave Magister
+    faction: 0
     Portrait: {fileID: 21300000, guid: 3a6d44758aef75e41b032ad4108b2dc1, type: 3}
   - PieceType: Queen
-    faction: 1
+    DisplayName: Phoenix Matriarch
+    faction: 0
     Portrait: {fileID: 21300000, guid: 0ffcf5fbd75503c40a9d88b3af27a093, type: 3}
   - PieceType: King
-    faction: 1
+    DisplayName: "Kael\u2019thas Sunstrider"
+    faction: 0
     Portrait: {fileID: 21300000, guid: 6be24e521cb82fc43b81aa15ebd7d0f6, type: 3}
   - PieceType: Knight
-    faction: 1
+    DisplayName: Hawkstrider Cavalier
+    faction: 0
     Portrait: {fileID: 21300000, guid: 1594878ffac046a47bddb74ff4ea7ac8, type: 3}
   factionMoveIcons: []
 --- !u!114 &437635011
@@ -2555,6 +2567,7 @@ GameObject:
   - component: {fileID: 744702473}
   - component: {fileID: 744702474}
   - component: {fileID: 744702475}
+  - component: {fileID: 744702476}
   m_Layer: 5
   m_Name: ProtraitImage
   m_TagString: Untagged
@@ -2619,6 +2632,19 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &744702476
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 744702472}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5f2af8d001bab84e8409cbd90ca3105, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  content: 
 --- !u!1 &825163348
 GameObject:
   m_ObjectHideFlags: 0
@@ -2966,7 +2992,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -5050,7 +5076,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -32, y: -26.99997}
+  m_AnchoredPosition: {x: -32, y: -26.999939}
   m_SizeDelta: {x: -1139.4329, y: -107.5645}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1865293729
@@ -5151,7 +5177,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:

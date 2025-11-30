@@ -101,6 +101,7 @@ public class InputManager : MonoBehaviour
     public struct PiecePortraitData
     {
         public string PieceType;
+        public string DisplayName; // headlike name
         public Faction faction;
         public Sprite Portrait;
     }
@@ -488,8 +489,9 @@ public class InputManager : MonoBehaviour
         //actionBarPanel.SetActive(true);
         actionBarPanel.SetActive(canControl);
 
-        // 1. 设置头像 (只设置一次)
-        if (portraitImage != null) portraitImage.sprite = GetPortraitForPiece(piece);
+        // 1. 设置头像
+        //if (portraitImage != null) portraitImage.sprite = GetPortraitForPiece(piece);
+        UpdatePortraitUI(piece);
 
         // 2. 初始化数值
         UpdateSlidersAndTextOnly(piece);
@@ -505,6 +507,31 @@ public class InputManager : MonoBehaviour
             ConfigureActionButtons(piece);
         }
     }
+
+    private void UpdatePortraitUI(Piece piece)
+    {
+        if (portraitImage == null) return;
+
+        // 使用 ResolvedFaction 修复 Bug
+        Faction targetFaction = piece.ResolvedFaction;
+
+        var data = piecePortraits.FirstOrDefault(x =>
+            x.PieceType == piece.PieceType &&
+            x.faction == targetFaction
+        );
+
+        // 设置图片
+        portraitImage.sprite = (data.Portrait != null) ? data.Portrait : defaultPortrait;
+
+        // 设置 Tooltip
+        TooltipTrigger tooltip = portraitImage.GetComponent<TooltipTrigger>();
+        if (tooltip != null)
+        {
+            string nameToShow = !string.IsNullOrEmpty(data.DisplayName) ? data.DisplayName : piece.PieceType;
+            tooltip.SetContent($"<b>{nameToShow}</b>");
+        }
+    }
+
 
     private void UpdateSlidersAndTextOnly(Piece piece)
     {
@@ -767,6 +794,7 @@ public class InputManager : MonoBehaviour
         return icon;
     }
 
+    /*
     private Sprite GetPortraitForPiece(Piece piece)
     {
         // 1. 确定这个棋子是哪个阵营
@@ -783,6 +811,7 @@ public class InputManager : MonoBehaviour
         if (data.Portrait != null) return data.Portrait;
         return defaultPortrait;
     }
+    */
 
     private Sprite GetIconForSpell(string spellName)
     {
