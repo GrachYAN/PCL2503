@@ -641,8 +641,61 @@ public abstract class Piece : MonoBehaviour
         }
         this.IsWhite = newAllegiance;
 
+        this.HasMoved = 0;
+
         Debug.Log($"{PieceType} at ({GetCoordinates().x}, {GetCoordinates().y}) is now controlled by the {(newAllegiance ? "White" : "Black")} side.");
+        /*
         // TODO: 在这里更新棋子的视觉效果（如改变材质、颜色、添加状态图标）
+        if (GetComponent<Renderer>() != null && logicManager != null && logicManager.board != null)
+        {
+            // 假设 logicManager.board 引用了 Board 脚本，且里面有材质列表
+            // 这里只是示例，具体取决于你的 Board 脚本怎么存材质
+            // GetComponent<Renderer>().material = newAllegiance ? logicManager.board.WhiteMaterial : logicManager.board.BlackMaterial;
+
+            // 或者简单暴力一点，用颜色区分（临时调试用）
+            GetComponent<Renderer>().material.color = newAllegiance ? Color.white : Color.black;
+        }
+        */
+    }
+
+    /// <summary>
+    /// 强制切换阵营
+    /// </summary>
+    /*
+    public void SwitchFaction(bool newIsWhite, Faction newFaction)
+    {
+        this.IsWhite = newIsWhite;
+        this.PieceFaction = newFaction;
+        InitializeSpells(this.PieceType);
+    }
+    */
+
+    public void SwitchFaction(bool newIsWhite, Faction newFaction)
+    {
+        this.IsWhite = newIsWhite;
+        this.PieceFaction = newFaction;
+
+        InitializeSpells(this.PieceType);
+
+ 
+    }
+
+    /// <summary>
+    /// 重置回合状态，允许棋子再次行动
+    /// </summary>
+    public void ResetTurnState()
+    {
+        this.HasMoved = 0; // 0 代表未移动
+        // 也可以选择是否重置技能冷却，通常不重置技能冷却会比较平衡
+        // 但如果你希望它能立刻放技能，且无视之前的冷却，可以在这里调用 ResetCooldowns()
+    }
+
+    /// <summary>
+    /// 强制设置移动状态
+    /// </summary>
+    public void SetHasMoved(int value)
+    {
+        this.HasMoved = value;
     }
 
     /// <summary>
@@ -655,6 +708,8 @@ public abstract class Piece : MonoBehaviour
             this.IsWhite = originalAllegiance.Value;
             Debug.Log($"{PieceType} at ({GetCoordinates().x}, {GetCoordinates().y}) has reverted to its original allegiance: {(this.IsWhite ? "White" : "Black")}.");
             originalAllegiance = null;
+
+            this.HasMoved = 1;
 
             // TODO: 在这里恢复棋子的原始视觉效果
         }
@@ -747,6 +802,18 @@ public abstract class Piece : MonoBehaviour
             }
             return false;
         }
+    }
+
+
+    // 是否被精神控制
+    public bool IsMindControlled => logicManager != null && logicManager.IsPieceUnderMindControl(this);
+
+    // 是否有堡垒光环保护
+    public bool HasRampartBuff => logicManager != null && logicManager.IsPieceProtectedByRampart(this);
+
+    public void SetFaction(bool isWhite)
+    {
+        IsWhite = isWhite;
     }
 
 }

@@ -1712,6 +1712,16 @@ MonoBehaviour:
     icon: {fileID: 21300000, guid: 2421036502a36604b9e273314d9575f1, type: 3}
     iconTint: {r: 1, g: 1, b: 1, a: 1}
     description: Allies with this buff cannot be damaged.
+  - effectID: Mind Control
+    displayName: Mind Control
+    icon: {fileID: 21300000, guid: 2689daf1cd6fd5d4f93c7efde022a3e9, type: 3}
+    iconTint: {r: 1, g: 1, b: 1, a: 1}
+    description: "Being controlled by Kael\u2019thas Sunstrider."
+  - effectID: Fortified Rampart
+    displayName: Fortified Rampart
+    icon: {fileID: 21300000, guid: e53e3f12c29619c46906261314033d4e, type: 3}
+    iconTint: {r: 1, g: 1, b: 1, a: 1}
+    description: "Take \u20133 damage from all sources"
   actionBarPanel: {fileID: 716827994}
   moveButton: {fileID: 1422921698}
   moveButtonIcon: {fileID: 606827249}
@@ -5076,7 +5086,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -32, y: -26.999939}
+  m_AnchoredPosition: {x: -32.000122, y: -26.999786}
   m_SizeDelta: {x: -1139.4329, y: -107.5645}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1865293729

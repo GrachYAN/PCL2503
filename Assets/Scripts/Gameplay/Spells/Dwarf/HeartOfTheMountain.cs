@@ -23,6 +23,6 @@ public class HeartOfTheMountain : Spell
             return;
         }
 
-        LogicManager.ApplyHeartOfMountainBuff(Caster.IsWhite, 3);
+        LogicManager.ApplyHeartOfMountainBuff(Caster.IsWhite, 4);
     }
 }

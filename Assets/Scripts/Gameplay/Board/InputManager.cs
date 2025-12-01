@@ -417,22 +417,82 @@ public class InputManager : MonoBehaviour
                 selectedSpell.Cast(primaryTarget);
 
                 // 施法后结束回合
-                logicManager.EndTurn();
+                //logicManager.EndTurn();
 
-                // --- 【新增】施法成功后，立即刷新 UI ---
-                // 这样 CD 遮罩会瞬间出现，蓝量条也会瞬间扣减
+
+                //cd
                 if (selectedPiece != null)
                 {
-                    ShowUI(selectedPiece,true);
+                    ShowUI(selectedPiece, true);
+                }
+
+                if (selectedPiece != null)
+                {
+                    ShowUI(selectedPiece, true);
                     // 或者只调用 ConfigureActionButtons(selectedPiece); 也可以
                 }
 
-                // --- 【新增】施法成功后，立即刷新 UI ---
-                // 这样 CD 遮罩会瞬间出现，蓝量条也会瞬间扣减
-                if (selectedPiece != null)
+                // 检查技能是否应该结束回合
+                if (selectedSpell.EndsTurn)
                 {
-                    ShowUI(selectedPiece,true);
-                    // 或者只调用 ConfigureActionButtons(selectedPiece); 也可以
+                    logicManager.EndTurn();
+                    ResetSelection(); // 只有结束回合时才完全重置选择
+                }
+                else
+                {
+                    /*
+                    currentState = InputState.None;
+                    UnhighlightLegalMoves();
+                    UnhighlightSelectedSquare();
+                    selectedSpell = null;
+
+                    Piece targetPiece = logicManager.boardMap[(int)targetCoords.x, (int)targetCoords.y];
+                    if (targetPiece != null)
+                    {
+                        // 手动触发选中逻辑
+                        selectedPiece = targetPiece;
+                        currentState = InputState.PieceSelected;
+                        HighlightSelectedSquare();
+                        ShowUI(selectedPiece, true); // true 表示我们可以控制它
+                    }
+                    else
+                    {
+                        ResetSelection();
+                    }
+                    */
+                    // 1. 获取刚才被施法的目标棋子
+                    Piece targetPiece = logicManager.boardMap[(int)targetCoords.x, (int)targetCoords.y];
+
+                    // 2. 清理当前的施法状态
+                    UnhighlightLegalMoves();
+                    UnhighlightSelectedSquare();
+                    selectedSpell = null; // 清空当前选中的技能
+
+                    // 3. 检查目标是否存在，且现在是否属于我方（MindControl 会把 IsWhite 变成我方）
+                    // 注意：LogicManager.IsWhiteTurn 应该是当前回合
+                    bool isNowMyPiece = targetPiece != null && (targetPiece.IsWhite == logicManager.IsWhiteTurn);
+
+                    if (isNowMyPiece)
+                    {
+                        // 4. 强制选中这个新棋子
+                        selectedPiece = targetPiece;
+                        currentState = InputState.PieceSelected;
+
+                        // 5. 高亮它
+                        HighlightSelectedSquare();
+
+                        // 6. 【关键】强制刷新 UI，显示新棋子的头像、技能栏、Buff
+                        // 第二个参数 true 代表 "CanControl"，因为现在它是我们的人了
+                        ShowUI(selectedPiece, true);
+
+                        Debug.Log($"InputManager: Immediately took control of {targetPiece.PieceType}");
+                    }
+                    else
+                    {
+                        // 如果不是控制类技能，或者目标没变成我方，就正常取消选择
+                        ResetSelection();
+                    }
+                    // === 核心修改结束 ===
                 }
             }
             else
@@ -604,6 +664,18 @@ public class InputManager : MonoBehaviour
         if (piece.IsProtectedBySunwell) TryAddStatusIcon("Sunwell Ward"); // 记得在 Inspector 里添加 ID 为 "SunwellWard" 的配置
         if (piece.IsHeartOfMountainActive) TryAddStatusIcon("Heart of the Mountain"); // 记得添加 ID 为 "HeartOfMountain" 的配置
         if (piece.HasSunwellAnthemBuff) TryAddStatusIcon("Sunwell Anthem");
+
+        // 6. Mind Control (精神控制)
+        if (piece.IsMindControlled)
+        {
+            TryAddStatusIcon("Mind Control"); 
+        }
+
+        // 7. Fortified Rampart (堡垒光环)
+        if (piece.HasRampartBuff)
+        {
+            TryAddStatusIcon("Fortified Rampart"); 
+        }
     }
 
 

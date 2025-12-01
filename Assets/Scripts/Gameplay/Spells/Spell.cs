@@ -61,6 +61,7 @@ public abstract class Spell
     public int ManaCost;
     public int Cooldown;
     public int CurrentCooldown { get; protected set; }
+    public bool EndsTurn = true;
 
     protected Piece Caster;
     protected LogicManager LogicManager;

@@ -284,7 +284,16 @@ public class LogicManager : NetworkBehaviour
         spell.Cast(targetCoords);
         CastSpellClientRpc(pieceX, pieceY, spellIndex, castData);
         // --- 4. End Turn ---
-        EndTurn(); // This flips the m_IsWhiteTurn_Network variable
+        //EndTurn(); // This flips the m_IsWhiteTurn_Network variable
+
+        if (spell.EndsTurn)
+        {
+            EndTurn(); // This flips the m_IsWhiteTurn_Network variable
+        }
+        else
+        {
+            Debug.Log($"Server: Spell '{spell.SpellName}' does not end turn. Player can continue acting.");
+        }
     }
 
     [ClientRpc]
@@ -579,7 +588,11 @@ public class LogicManager : NetworkBehaviour
                 continue;
             }
 
-            aura.RemainingRounds--;
+            if (aura.Source.IsWhite == IsWhiteTurn)
+            {
+                aura.RemainingRounds--;
+            }
+
             if (aura.RemainingRounds <= 0)
             {
                 activeRampartAuras.RemoveAt(i);
@@ -675,7 +688,7 @@ public class LogicManager : NetworkBehaviour
 
     private void TickHeartOfMountainBuffs()
     {
-        if (whiteHeartBuff != null)
+        if (IsWhiteTurn && whiteHeartBuff != null)
         {
             whiteHeartBuff.RemainingRounds--;
             if (whiteHeartBuff.RemainingRounds <= 0)
@@ -684,7 +697,7 @@ public class LogicManager : NetworkBehaviour
             }
         }
 
-        if (blackHeartBuff != null)
+        if (!IsWhiteTurn && blackHeartBuff != null)
         {
             blackHeartBuff.RemainingRounds--;
             if (blackHeartBuff.RemainingRounds <= 0)
@@ -1022,6 +1035,8 @@ public class LogicManager : NetworkBehaviour
     /// <summary>
     /// 公共接口，用于施加精神控制效果
     /// </summary>
+    ///
+    /*
     public void ApplyMindControl(Piece caster, Piece target)
     {
         if (target == null) return;
@@ -1035,6 +1050,80 @@ public class LogicManager : NetworkBehaviour
         });
 
         // TODO: 在此播放精神控制的视觉和声音特效
+    }
+    */
+
+    /// <summary>
+    /// 施加精神控制：改变阵营，并允许立即行动
+    /// </summary>
+    /*
+     public void ApplyMindControl(Piece caster, Piece target)
+     {
+         if (caster == null || target == null) return;
+
+         Debug.Log($"MindControl: {caster.PieceType} took control of {target.PieceType}!");
+
+         target.SwitchFaction(caster.IsWhite, caster.PieceFaction);
+
+         target.ResetTurnState();
+
+         caster.SetHasMoved(1);
+
+         // VFXManager.Instance.PlayConversionEffect(target.transform.position);
+     }
+    */
+    public void ApplyMindControl(Piece caster, Piece target)
+    {
+        if (target == null || caster == null) return;
+
+        // 1. 执行棋子层面的数据变更
+        target.MindControl(caster.IsWhite);
+
+        // 2. 注册到逻辑管理器，用于计时和状态图标显示
+        // 先移除该目标已有的控制效果（防止叠加出错）
+        activeMindControlEvents.RemoveAll(e => e.ControlledPiece == target);
+
+        activeMindControlEvents.Add(new MindControlEffect
+        {
+            ControlledPiece = target,
+            RemainingTurns = 2 // 持续2个“半回合”
+        });
+
+        Debug.Log($"LogicManager: Applied Mind Control to {target.PieceType}");
+    }
+
+    /// <summary>
+    /// 撤销精神控制 (当玩家在 InputManager 中取消选中时调用)
+    /// </summary>
+    public void RevertMindControl(Piece caster, Piece target)
+    {
+        if (caster == null || target == null) return;
+
+        Debug.Log("Reverting Mind Control...");
+
+        // 1. 阵营转回去 (取反)
+        // 获取施法者的对立阵营
+        Faction originalFaction = GetOppositeFaction(caster.PieceFaction);
+        target.SwitchFaction(!caster.IsWhite, originalFaction);
+
+        // 2. 恢复施法者的行动力 (让他能重新选技能)
+        caster.SetHasMoved(0);
+
+        // 3. 恢复被控制者的状态
+        // 为了防止滥用（比如控制敌人->看视野->撤销），通常可以把敌人设为已行动
+        // 或者如果你希望完全回滚，就设为 1 (假设敌人回合已经结束了)
+        target.SetHasMoved(1);
+    }
+
+    /// <summary>
+    /// 辅助方法：获取对立阵营
+    /// </summary>
+    private Faction GetOppositeFaction(Faction f)
+    {
+        // 根据你的游戏逻辑扩展，这里假设只有 Dwarf 和 Elf
+        if (f == Faction.Dwarf) return Faction.Elf;
+        if (f == Faction.Elf) return Faction.Dwarf;
+        return Faction.Dwarf; // 默认 fallback
     }
 
     /// <summary>
@@ -1122,4 +1211,21 @@ public class LogicManager : NetworkBehaviour
             }
         }
     }
+
+    public bool IsPieceUnderMindControl(Piece piece)
+    {
+        if (piece == null) return false;
+        // 遍历 activeMindControlEvents 列表查找该棋子
+        return activeMindControlEvents.Any(e => e.ControlledPiece == piece);
+    }
+
+    // 2. 查询棋子是否受到 Fortified Rampart 保护
+    // 其实你已经有了 GetDamageReductionForPiece，我们可以复用它
+    // 只要减伤 > 0，就说明有 Buff
+    public bool IsPieceProtectedByRampart(Piece piece)
+    {
+        return GetDamageReductionForPiece(piece) > 0;
+        // pre权宜之计。有个隐患，跟其他的减伤逻辑冲突。
+    }
+
 }
