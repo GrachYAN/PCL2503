@@ -241,9 +241,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d5fa68cf9b0ab944699b8d410c753ec4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2330324601738723117}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d5fa68cf9b0ab944699b8d410c753ec4, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 5470363741131698764}
   m_SourcePrefab: {fileID: 100100000, guid: d5fa68cf9b0ab944699b8d410c753ec4, type: 3}
 --- !u!4 &8476025026637799956 stripped
 Transform:
@@ -290,28 +287,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   <PieceType>k__BackingField: Bishop
---- !u!114 &5470363741131698764
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9145460050450544814}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 35a84552e965bdc42a1d47339d67f377, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  targetPiece: {fileID: 2330324601738723117}
-  statusCanvas: {fileID: 1204251648236410117}
-  iconContainer: {fileID: 699901750247816639}
-  stunIconPrefab: {fileID: 6321342445425670832, guid: ec83d4142b60a784c95075405eb055f2, type: 3}
-  rootIconPrefab: {fileID: 8657574259871418786, guid: 1df66520e54629a4095c9008fbff0fb9, type: 3}
-  dazeIconPrefab: {fileID: 8052065096217725821, guid: 027c2a0dffbd54a4e999e417681ee42e, type: 3}
-  shieldIconPrefab: {fileID: 2331893251512767695, guid: 68fa42236311be944a448e71a0bf7e92, type: 3}
-  dotFireIconPrefab: {fileID: 7269851251074922781, guid: e3e5d93e30b0adb4f8744e04604eacee, type: 3}
-  dotArcaneIconPrefab: {fileID: 0}
-  dotHolyIconPrefab: {fileID: 0}
-  dotPhysicalIconPrefab: {fileID: 0}
-  buffDefenseIconPrefab: {fileID: 0}
-  buffAttackIconPrefab: {fileID: 0}

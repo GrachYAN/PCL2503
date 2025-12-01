@@ -287,15 +287,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 976373957142640789, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_Color.b
-      value: 0.49803922
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 976373957142640789, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_Color.g
-      value: 0.49803922
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 976373957142640789, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_Color.r
-      value: 0.49803922
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2111441773049675892, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_Pivot.x
@@ -375,6 +375,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2111441773049675892, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545527747510735061, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
+      propertyPath: m_Interactable
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
@@ -1502,15 +1506,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 976373957142640789, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_Color.b
-      value: 0.49803925
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 976373957142640789, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_Color.g
-      value: 0.49803925
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 976373957142640789, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_Color.r
-      value: 0.49803925
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2111441773049675892, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_Pivot.x
@@ -1590,6 +1594,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2111441773049675892, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545527747510735061, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
+      propertyPath: m_Interactable
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
@@ -3088,9 +3096,25 @@ PrefabInstance:
       propertyPath: m_Name
       value: OnlineModeButton
       objectReference: {fileID: 0}
+    - target: {fileID: 115405834289219911, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 250675349599319335, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_text
       value: Online Mode
+      objectReference: {fileID: 0}
+    - target: {fileID: 976373957142640789, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
+      propertyPath: m_Color.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 976373957142640789, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 976373957142640789, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
+      propertyPath: m_Color.r
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2111441773049675892, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_Pivot.x
@@ -3170,6 +3194,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2111441773049675892, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545527747510735061, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
+      propertyPath: m_Interactable
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
