@@ -83,6 +83,13 @@ public class GameNotificationManager : MonoBehaviour
         GameObject obj = Instantiate(damageTextPrefab, parent);
         obj.transform.localScale = Vector3.one; // 强制重置缩放
 
+        FloatingMessage floatingMsg = obj.GetComponent<FloatingMessage>();
+        if (floatingMsg != null)
+        {
+            // 【改这里】：把 worldPos 作为第三个参数传进去
+            floatingMsg.Setup("-" + amount.ToString(), targetColor, worldPos);
+        }
+
         // 3. 坐标转换 (世界 -> 屏幕)
         // 【调整高度】：之前是 2.5f 可能太高了，改成 1.5f 或 1.8f 试试
         Vector3 screenPos = mainCam.WorldToScreenPoint(worldPos + Vector3.up * 0.5f);
@@ -91,8 +98,7 @@ public class GameNotificationManager : MonoBehaviour
         screenPos.z = 0;
         obj.transform.position = screenPos;
 
-        // 4. 设置内容
-        FloatingMessage floatingMsg = obj.GetComponent<FloatingMessage>();
+        /*
         if (floatingMsg != null)
         {
             floatingMsg.Setup("-" + amount.ToString(), targetColor);
@@ -100,5 +106,6 @@ public class GameNotificationManager : MonoBehaviour
             // 随机偏移一点点，防止数字重叠
             obj.transform.position += new Vector3(Random.Range(-20f, 20f), Random.Range(-10f, 10f), 0);
         }
+        */
     }
 }

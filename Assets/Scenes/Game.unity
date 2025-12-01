@@ -1053,7 +1053,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boardTransform: {fileID: 514758623}
   distance: 10
-  angle: 30
+  angle: 40
   fieldOfView: 60
   orbitSpeed: 120
   zoomSpeed: 10
