@@ -462,7 +462,7 @@ public abstract class Piece : MonoBehaviour
         int costAdjustment = 0;
         if (dazeStacks > 0)
         {
-            costAdjustment += dazeStacks * 3;
+            costAdjustment += 3;
         }
 
         // --- 新增代码块 ---
@@ -478,7 +478,7 @@ public abstract class Piece : MonoBehaviour
 
     public int GetAdditionalSpellCooldown()
     {
-        return dazeStacks * 2;
+        return 2;
     }
 
     public void OnSpellCast()
