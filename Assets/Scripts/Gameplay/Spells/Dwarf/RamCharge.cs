@@ -25,7 +25,7 @@ public class RamCharge : Spell
         SpellName = "Ram Charge";
         Description = "Jump like a knight, then scorch one adjacent enemy for 5 Fire.";
         ManaCost = 3;
-        Cooldown = 2;
+        Cooldown = 0;
     }
 
     public override void BeginTargeting()

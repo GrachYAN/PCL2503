@@ -8,7 +8,7 @@ public class PrismaticBarrier : Spell
         SpellName = "Prismatic Barrier";
         Description = "Places a barrier on a diagonal square for 3 rounds; it blocks enemy LoS.";
         ManaCost = 6;
-        Cooldown = 5;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()
@@ -24,16 +24,16 @@ public class PrismaticBarrier : Spell
             for (int i = 1; i < 8; i++)
             {
                 Vector2 targetPos = startPos + dir * i;
-                if (!Caster.IsPositionWithinBoard(targetPos)) break; // ³¬³öÆåÅÌ£¬»»·½Ïò
+                if (!Caster.IsPositionWithinBoard(targetPos)) break; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-                // Ä¿±êµã±ØÐëÊÇ¿ÕµÄ
+                // Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿Õµï¿½
                 if (LogicManager.boardMap[(int)targetPos.x, (int)targetPos.y] == null)
                 {
                     validTargets.Add(targetPos);
                 }
                 else
                 {
-                    // Óöµ½Æå×Ó£¬×èµ²ÁËÂ·¾¶£¬²»ÄÜÔÙÍùÔ¶·Å
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó£ï¿½ï¿½èµ²ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½
                     break;
                 }
             }
@@ -43,7 +43,7 @@ public class PrismaticBarrier : Spell
 
     protected override void ExecuteEffect(Vector2 target)
     {
-        // ÇëÇóLogicManager·ÅÖÃÒ»¸ö³ÖÐø3»ØºÏµÄÆÁÕÏ
+        // ï¿½ï¿½ï¿½ï¿½LogicManagerï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½3ï¿½ØºÏµï¿½ï¿½ï¿½ï¿½ï¿½
         LogicManager.PlacePrismaticBarrier(target, 3);
     }
 }

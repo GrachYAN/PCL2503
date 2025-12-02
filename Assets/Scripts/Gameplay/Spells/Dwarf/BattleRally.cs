@@ -4,45 +4,45 @@ using UnityEngine;
 public class BattleRally : Spell
 {
     private const int MaxSelections = 3;
-    private readonly List<Vector2Int> selectedPawns = new List<Vector2Int>();
+    private readonly List<Vector2Int> selectedPieces = new List<Vector2Int>();
 
     public BattleRally()
     {
         SpellName = "Battle Rally";
-        Description = "Select up to three allied pawns within 2 to move them forward 1 square for free.";
+        Description = "Up to three Pieces within range 2 each move 1 forward (legal, free).";
         ManaCost = 4;
-        Cooldown = 4;
+        Cooldown = 0;
     }
 
     public override void BeginTargeting()
     {
-        selectedPawns.Clear();
+        selectedPieces.Clear();
     }
 
     public override void CancelTargeting()
     {
-        selectedPawns.Clear();
+        selectedPieces.Clear();
     }
 
     public override List<Vector2> GetValidTargetSquares()
     {
-        return ConvertToVector2(GetSelectablePawns());
+        return ConvertToVector2(GetSelectablePieces());
     }
 
     public override List<Vector2> GetCurrentValidSquares()
     {
         List<Vector2> targets = new List<Vector2>();
-        List<Vector2Int> candidates = GetSelectablePawns();
+        List<Vector2Int> candidates = GetSelectablePieces();
 
-        foreach (Vector2Int pawn in candidates)
+        foreach (Vector2Int piece in candidates)
         {
-            if (!selectedPawns.Contains(pawn))
+            if (!selectedPieces.Contains(piece))
             {
-                targets.Add(new Vector2(pawn.x, pawn.y));
+                targets.Add(new Vector2(piece.x, piece.y));
             }
         }
 
-        if (selectedPawns.Count > 0 && selectedPawns.Count < MaxSelections)
+        if (selectedPieces.Count > 0 && selectedPieces.Count < MaxSelections)
         {
             targets.Add(Caster.GetCoordinates());
         }
@@ -63,7 +63,7 @@ public class BattleRally : Spell
 
         if (gridTarget == casterPos)
         {
-            if (selectedPawns.Count == 0)
+            if (selectedPieces.Count == 0)
             {
                 return false;
             }
@@ -72,15 +72,15 @@ public class BattleRally : Spell
             return true;
         }
 
-        List<Vector2Int> candidates = GetSelectablePawns();
-        if (!candidates.Contains(gridTarget) || selectedPawns.Contains(gridTarget))
+        List<Vector2Int> candidates = GetSelectablePieces();
+        if (!candidates.Contains(gridTarget) || selectedPieces.Contains(gridTarget))
         {
             return false;
         }
 
-        selectedPawns.Add(gridTarget);
+        selectedPieces.Add(gridTarget);
 
-        if (selectedPawns.Count >= MaxSelections || selectedPawns.Count == candidates.Count)
+        if (selectedPieces.Count >= MaxSelections || selectedPieces.Count == candidates.Count)
         {
             castComplete = true;
         }
@@ -107,7 +107,7 @@ public class BattleRally : Spell
 
     public override void ApplyCastData(SpellCastData data)
     {
-        selectedPawns.Clear();
+        selectedPieces.Clear();
         TryAddSelection(data.PrimaryX, data.PrimaryY);
         TryAddSelection(data.SecondaryX, data.SecondaryY);
         TryAddSelection(data.TertiaryX, data.TertiaryY);
@@ -120,7 +120,7 @@ public class BattleRally : Spell
             return false;
         }
 
-        List<Vector2Int> candidates = GetSelectablePawns();
+        List<Vector2Int> candidates = GetSelectablePieces();
         HashSet<Vector2Int> seen = new HashSet<Vector2Int>();
         bool hasValidSelection = false;
 
@@ -149,21 +149,21 @@ public class BattleRally : Spell
             return;
         }
 
-        foreach (Vector2Int pawnPos in selectedPawns)
+        foreach (Vector2Int piecePos in selectedPieces)
         {
-            if (!Caster.IsPositionWithinBoard(pawnPos))
+            if (!Caster.IsPositionWithinBoard(piecePos))
             {
                 continue;
             }
 
-            Piece piece = LogicManager.boardMap[pawnPos.x, pawnPos.y];
-            if (piece is not Pawn pawn || pawn.IsWhite != Caster.IsWhite)
+            Piece piece = LogicManager.boardMap[piecePos.x, piecePos.y];
+            if (piece == null || piece.IsWhite != Caster.IsWhite)
             {
                 continue;
             }
 
-            int direction = pawn.IsWhite ? 1 : -1;
-            Vector2Int destination = pawnPos + new Vector2Int(0, direction);
+            int direction = piece.IsWhite ? 1 : -1;
+            Vector2Int destination = piecePos + new Vector2Int(0, direction);
             if (!Caster.IsPositionWithinBoard(destination))
             {
                 continue;
@@ -174,18 +174,18 @@ public class BattleRally : Spell
                 continue;
             }
 
-            pawn.Move(new Vector2(destination.x, destination.y));
+            piece.Move(new Vector2(destination.x, destination.y));
         }
 
-        selectedPawns.Clear();
+        selectedPieces.Clear();
     }
 
-    private List<Vector2Int> GetSelectablePawns()
+    private List<Vector2Int> GetSelectablePieces()
     {
-        List<Vector2Int> pawns = new List<Vector2Int>();
+        List<Vector2Int> pieces = new List<Vector2Int>();
         if (Caster == null || LogicManager == null)
         {
-            return pawns;
+            return pieces;
         }
 
         Vector2Int origin = Vector2Int.RoundToInt(Caster.GetCoordinates());
@@ -201,12 +201,14 @@ public class BattleRally : Spell
                 }
 
                 Piece piece = LogicManager.boardMap[pos.x, pos.y];
-                if (piece is not Pawn pawn || pawn.IsWhite != Caster.IsWhite)
+                if (piece == null || piece.IsWhite != Caster.IsWhite)
                 {
                     continue;
                 }
 
-                Vector2Int destination = pos + new Vector2Int(0, pawn.IsWhite ? 1 : -1);
+                // Check if this piece can move 1 forward
+                int direction = piece.IsWhite ? 1 : -1;
+                Vector2Int destination = pos + new Vector2Int(0, direction);
                 if (!Caster.IsPositionWithinBoard(destination))
                 {
                     continue;
@@ -217,18 +219,18 @@ public class BattleRally : Spell
                     continue;
                 }
 
-                pawns.Add(pos);
+                pieces.Add(pos);
             }
         }
 
-        return pawns;
+        return pieces;
     }
 
     private Vector2Int GetSelectionOrInvalid(int index)
     {
-        if (index < selectedPawns.Count)
+        if (index < selectedPieces.Count)
         {
-            return selectedPawns[index];
+            return selectedPieces[index];
         }
 
         return new Vector2Int(-1, -1);
@@ -242,9 +244,9 @@ public class BattleRally : Spell
         }
 
         Vector2Int pos = new Vector2Int(x, y);
-        if (!selectedPawns.Contains(pos))
+        if (!selectedPieces.Contains(pos))
         {
-            selectedPawns.Add(pos);
+            selectedPieces.Add(pos);
         }
     }
 

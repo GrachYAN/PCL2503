@@ -26,7 +26,7 @@ public class ShieldPivot : Spell
         SpellName = "Shield Pivot";
         Description = "Move 1 horizontal, then shield an adjacent ally for 4.";
         ManaCost = 3;
-        Cooldown = 3;
+        Cooldown = 0;
     }
 
     public override void BeginTargeting()

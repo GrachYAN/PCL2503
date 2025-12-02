@@ -503,12 +503,12 @@ public abstract class Piece : MonoBehaviour
     {
         switch (type)
         {
-            case "Pawn": MaxHP = 8; MaxMana = 3; break;
-            case "Knight": MaxHP = 15; MaxMana = 7; break;
-            case "Rook": MaxHP = 18; MaxMana = 8; break;
-            case "Bishop": MaxHP = 12; MaxMana = 9; break;
-            case "Queen": MaxHP = 18; MaxMana = 10; break;
-            case "King": MaxHP = 24; MaxMana = 12; break;
+            case "Pawn": MaxHP = 7; MaxMana = 3; break;
+            case "Knight": MaxHP = 12; MaxMana = 5; break;
+            case "Rook": MaxHP = 15; MaxMana = 6; break;
+            case "Bishop": MaxHP = 12; MaxMana = 6; break;
+            case "Queen": MaxHP = 16; MaxMana = 8; break;
+            case "King": MaxHP = 18; MaxMana = 9; break;
             default:
                 Debug.LogError("unknown: " + type);
                 MaxHP = 1; MaxMana = 0; break;
@@ -540,24 +540,21 @@ public abstract class Piece : MonoBehaviour
         switch (resolvedFaction)
         {
             case Faction.Elf:
-                // 精灵阵营的技能
+                // Blood Elf spells
                 switch (type)
                 {
                     case "Pawn":
                         Spells.Add(new CrystallinePush());
-                        Spells.Add(new Drain());
                         break;
                     case "Knight":
-                        Spells.Add(new HawkstriderDash());
-                        Spells.Add(new HawkCry());
+                        Spells.Add(new BattleRally());
                         break;
                     case "Bishop":
                         Spells.Add(new ScorchingRay());
                         Spells.Add(new PrismaticBarrier());
                         break;
                     case "Rook":
-                        Spells.Add(new SunwellWard());
-                        Spells.Add(new Pyroblast());
+                        Spells.Add(new FortifiedRampart());
                         break;
                     case "Queen":
                         Spells.Add(new PhoenixDive());
@@ -572,34 +569,30 @@ public abstract class Piece : MonoBehaviour
                 break;
 
             case Faction.Dwarf:
-                // 矮人阵营的技能
+                // Dwarf spells
                 switch (type)
                 {
                     case "Pawn":
-                        Spells.Add(new HammerSlam());
-                        Spells.Add(new ShieldPivot());
+                        Spells.Add(new CrystallinePush());
                         break;
                     case "Knight":
-                        Spells.Add(new RamCharge());
                         Spells.Add(new BattleRally());
                         break;
                     case "Bishop":
-                        Spells.Add(new HolyRadiance());
-                        Spells.Add(new Smite());
+                        Spells.Add(new ScorchingRay());
+                        Spells.Add(new PrismaticBarrier());
                         break;
                     case "Rook":
                         Spells.Add(new FortifiedRampart());
-                        Spells.Add(new SeismicShock());
                         break;
                     case "Queen":
+                        Spells.Add(new PhoenixDive());
                         Spells.Add(new CarryAlly());
-                        Spells.Add(new SkyshatterScreech());
                         break;
                     case "King":
                         Spells.Add(new GemstoneSmash());
                         Spells.Add(new HeartOfTheMountain());
                         break;
-                        // ... 其他矮人棋子技能
                 }
                 break;
         }

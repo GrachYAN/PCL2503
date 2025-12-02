@@ -29,7 +29,7 @@ public class HawkstriderDash : Spell
         SpellName = "Hawkstrider Dash";
         Description = "Jump to a target square like a knight, dealing 5 Fire damage to one adjacent enemy upon landing.";
         ManaCost = 3;
-        Cooldown = 2;
+        Cooldown = 0;
     }
 
     public override void BeginTargeting()

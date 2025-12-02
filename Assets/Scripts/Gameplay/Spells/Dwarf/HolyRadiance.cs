@@ -11,7 +11,7 @@ public class HolyRadiance : Spell
         SpellName = "Holy Radiance";
         Description = "Heal up to two allies on diagonals within 2 for 4 HP each.";
         ManaCost = 5;
-        Cooldown = 3;
+        Cooldown = 0;
     }
 
     public override void BeginTargeting()

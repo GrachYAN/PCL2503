@@ -11,8 +11,8 @@ public class AshenRebirth : Spell
     {
         SpellName = "Ashen Rebirth";
         Description = "Revive the most recently destroyed friendly piece on any empty square of your back rank at 7 HP and full mana.";
-        ManaCost = 9;
-        Cooldown = 8;
+        ManaCost = 7;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()

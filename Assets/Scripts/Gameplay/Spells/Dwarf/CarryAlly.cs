@@ -20,8 +20,8 @@ public class CarryAlly : Spell
     {
         SpellName = "Carry Ally";
         Description = "Pick an adjacent ally, move up to 3 in a straight line, then drop them on an adjacent square.";
-        ManaCost = 4;
-        Cooldown = 3;
+        ManaCost = 5;
+        Cooldown = 0;
     }
 
     public override void BeginTargeting()

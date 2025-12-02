@@ -7,9 +7,9 @@ public class SunwellWard : Spell
     public SunwellWard()
     {
         SpellName = "Sunwell Ward";
-        Description = "Create a 3¡Á3 aura buff centered on the Rook for 1 round. Allies inside cannot be damaged.";
+        Description = "Create a 5x5 aura buff centered on the Rook for 1 round. Allies inside cannot be damaged.";
         ManaCost = 4;
-        Cooldown = 3;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()

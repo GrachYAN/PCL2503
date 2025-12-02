@@ -13,7 +13,7 @@ public class SeismicShock : Spell
         SpellName = "Seismic Shock";
         Description = "Enemies on the same rank or file within 3 take 4 Arcane and are Rooted for 1 round.";
         ManaCost = 6;
-        Cooldown = 4;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()

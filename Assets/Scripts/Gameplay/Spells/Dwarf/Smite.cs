@@ -13,7 +13,7 @@ public class Smite : Spell
         SpellName = "Smite";
         Description = "Diagonal ray up to 3. First enemy hit takes 5 Holy and is Dazed.";
         ManaCost = 5;
-        Cooldown = 3;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()

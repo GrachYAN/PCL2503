@@ -281,6 +281,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Undead
       objectReference: {fileID: 0}
+    - target: {fileID: 115405834289219911, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 250675349599319335, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_text
       value: Undead
@@ -1498,7 +1502,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 115405834289219911, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 250675349599319335, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_text
@@ -2722,7 +2726,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2111441773049675892, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -450
+      value: -159
       objectReference: {fileID: 0}
     - target: {fileID: 2111441773049675892, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -3198,7 +3202,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4545527747510735061, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_Interactable
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -3455,7 +3459,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2111441773049675892, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -150
+      value: 150
       objectReference: {fileID: 0}
     - target: {fileID: 2111441773049675892, guid: 0a2b433d775d1e542857a6e780649628, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -3528,7 +3532,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -41, y: 43}
+  m_AnchoredPosition: {x: -20, y: 0}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2127246315

@@ -8,7 +8,7 @@ public class SkyshatterScreech : Spell
         SpellName = "Skyshatter Screech";
         Description = "All enemies within 2 take 5 Fire damage and are Dazed.";
         ManaCost = 6;
-        Cooldown = 5;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()

@@ -5,7 +5,7 @@ public class HammerSlam : Spell
 {
     public HammerSlam()
     {
-        SpellName = "Hammer Slam";
+        SpellName = "Crystalline Push";
         Description = "Adjacent enemy takes 3 Physical damage.";
         ManaCost = 0;
         Cooldown = 0;

@@ -6,9 +6,9 @@ public class HeartOfTheMountain : Spell
     public HeartOfTheMountain()
     {
         SpellName = "Heart of the Mountain";
-        Description = "Party buff: allies gain an extra orthogonal step and root immunity for 3 rounds.";
-        ManaCost = 9;
-        Cooldown = 8;
+        Description = "Party buff: allies gain an extra orthogonal step for 3 rounds.";
+        ManaCost = 7;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()

@@ -620,12 +620,11 @@ public class LogicManager : NetworkBehaviour
             }
 
             Vector2 center = aura.Source.GetCoordinates();
-            if (Mathf.Abs(center.x - piecePos.x) <= 1 && Mathf.Abs(center.y - piecePos.y) <= 1)
+            if (Mathf.Abs(center.x - piecePos.x) <= 2 && Mathf.Abs(center.y - piecePos.y) <= 2)
             {
                 reduction += aura.ReductionAmount;
             }
         }
-
         return reduction;
     }
 
@@ -975,8 +974,8 @@ public class LogicManager : NetworkBehaviour
         {
             if (p != null && p.IsWhite == isWhiteTeam)
             {
-                p.ApplyShield(5); // 施加5点护盾
-                p.SetDamageBonus(2);  // 设置伤害加成
+                // p.ApplyShield(5); // 施加5点护盾
+                p.SetDamageBonus(3);  // 设置伤害加成
             }
         }
         Debug.Log((isWhiteTeam ? "White" : "Black") + " team is affected by Sunwell Anthem.");

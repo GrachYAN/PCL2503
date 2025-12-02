@@ -8,7 +8,7 @@ public class Drain : Spell
         SpellName = "Drain";
         Description = "Adjacent enemy loses 4 Mana";
         ManaCost = 3;
-        Cooldown = 3;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()

@@ -12,9 +12,9 @@ public class GemstoneSmash : Spell
     public GemstoneSmash()
     {
         SpellName = "Gemstone Smash";
-        Description = "Deal 9 Holy to an adjacent enemy and heal 6 HP.";
-        ManaCost = 6;
-        Cooldown = 3;
+        Description = "Deal 10 Holy to an adjacent enemy and heal 6 HP.";
+        ManaCost = 5;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()

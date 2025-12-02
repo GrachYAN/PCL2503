@@ -7,9 +7,9 @@ public class SunwellAnthem : Spell
     public SunwellAnthem()
     {
         SpellName = "Sunwell Anthem";
-        Description = "Party-wide buff for 2 rounds: allies gain +2 damage, and -3 Mana cost. The buff also applies a shield of 5 HP.";
-        ManaCost = 9;
-        Cooldown = 8;
+        Description = "Party-wide buff for 2 rounds: allies gain +3 damage, and -3 Mana cost. ";
+        ManaCost = 7;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()

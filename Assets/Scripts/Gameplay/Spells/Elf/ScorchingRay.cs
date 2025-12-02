@@ -6,9 +6,9 @@ public class ScorchingRay : Spell
     public ScorchingRay()
     {
         SpellName = "Scorching Ray";
-        Description = "Diagonal ray; first enemy hit takes 4 FR, the rest takes 2 FR.";
-        ManaCost = 4;
-        Cooldown = 2;
+        Description = "Diagonal ray; first enemy hit takes 5 damage, the rest takes 3 damage.";
+        ManaCost = 5;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()
@@ -47,19 +47,22 @@ public class ScorchingRay : Spell
     {
         Vector2 casterPos = Caster.GetCoordinates();
         Vector2 direction = (target - casterPos).normalized;
-        direction = new Vector2(Mathf.Round(direction.x), Mathf.Round(direction.y)); // 确保是标准的对角线方向
+        direction = new Vector2(Mathf.Round(direction.x), Mathf.Round(direction.y));
 
-        int firstDamage = 4 + Caster.DamageBonus;
-        int subsequentDamage = 2 + Caster.DamageBonus;
+        int firstDamage = 5 + Caster.DamageBonus;
+        int subsequentDamage = 3 + Caster.DamageBonus;
 
-        // 第一个目标受到4点伤害
+        // Determine damage type based on faction: Fire for Elf, Holy for Dwarf
+        DamageType damageType = (Caster.ResolvedFaction == Faction.Dwarf) ? DamageType.Holy : DamageType.Fire;
+
+        // First target takes 5 damage
         Piece firstTargetPiece = LogicManager.boardMap[(int)target.x, (int)target.y];
         if (firstTargetPiece != null)
         {
-            firstTargetPiece.TakeDamage(firstDamage, DamageType.Fire);
+            firstTargetPiece.TakeDamage(firstDamage, damageType);
         }
 
-        // 沿射线继续对后续目标造成伤害
+        // Continue ray and deal 3 damage to subsequent enemies
         int step = 1;
         while (true)
         {
@@ -71,11 +74,11 @@ public class ScorchingRay : Spell
             {
                 if (nextPiece.IsWhite != Caster.IsWhite)
                 {
-                    nextPiece.TakeDamage(subsequentDamage, DamageType.Fire);
+                    nextPiece.TakeDamage(subsequentDamage, damageType);
                 }
                 else
                 {
-                    break; // 射线被友方单位阻挡
+                    break; // Blocked by friendly piece
                 }
             }
             step++;

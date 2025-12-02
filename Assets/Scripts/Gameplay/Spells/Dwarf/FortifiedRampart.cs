@@ -6,9 +6,9 @@ public class FortifiedRampart : Spell
     public FortifiedRampart()
     {
         SpellName = "Fortified Rampart";
-        Description = "Allies in a 3x3 aura centered on the rook take 3 less damage for 2 rounds.";
-        ManaCost = 4;
-        Cooldown = 3;
+        Description = "Allies in a 5x5 aura centered on the rook take 3 less damage for 3 rounds.";
+        ManaCost = 5;
+        Cooldown = 0;
     }
 
     public override List<Vector2> GetValidTargetSquares()
@@ -23,6 +23,6 @@ public class FortifiedRampart : Spell
             return;
         }
 
-        LogicManager.RegisterRampartAura(Caster, 3, 2);
+        LogicManager.RegisterRampartAura(Caster, 3, 3);
     }
 }

@@ -65,6 +65,8 @@ public class InputManager : MonoBehaviour
 
     [Header("Action Bar (Bottom Center)")]
     public GameObject actionBarPanel;
+    public GameObject actionBarBG_2Spells;
+    public GameObject actionBarBG_1Spell;
     public Button moveButton;
     public Image moveButtonIcon;
     public Button spellButton1;
@@ -717,44 +719,28 @@ public class InputManager : MonoBehaviour
         TooltipTrigger moveTrigger = moveButton.GetComponent<TooltipTrigger>();
         if (moveTrigger != null) moveTrigger.SetContent("<b>Make a movement</b>\n<size=80%>");
 
-        ConfigureSingleSpellButton(spellButton1, spellButton1Icon, spellButton1CDOverlay, spellButton1CDText, piece, 0);
-        ConfigureSingleSpellButton(spellButton2, spellButton2Icon, spellButton2CDOverlay, spellButton2CDText, piece, 1);
-    }
-    /*
-    private void ConfigureSingleSpellButton(Button btn, Image iconImg, Image cdOverlay, TextMeshProUGUI cdText,Piece piece, int index)
-    {
-        // 1. 先把 CD UI 隐藏，防止没有技能时残留显示
-        if (cdOverlay != null) cdOverlay.gameObject.SetActive(false);
-        if (cdText != null) cdText.gameObject.SetActive(false);
-
-        if (index >= piece.Spells.Count)
-        {
-            btn.gameObject.SetActive(false);
-            return;
-        }
-
-        Spell spell = piece.Spells[index];
-
-        btn.gameObject.SetActive(true);
-        // Always keep button interactable so we can play error sounds when clicked
-        // Visual feedback (CD overlay, mana color) will indicate if spell is unusable
-        btn.interactable = true;
-
-        btn.onClick.RemoveAllListeners();
-        btn.onClick.AddListener(() => OnSpellButton(index));
-
-        if (iconImg != null) iconImg.sprite = GetIconForSpell(spell.SpellName);
-        UpdateSpellCooldownUI(spell, cdOverlay, cdText);
-        TooltipTrigger trigger = btn.GetComponent<TooltipTrigger>();
-      
-        if (trigger != null)
-        {
-            string desc = $"<b>{spell.SpellName}</b> <size=80%><color=#4287f5>({spell.ManaCost} Mana)</color></size>\nCD: {spell.Cooldown} Turn(s)\n{spell.Description}";
-            trigger.SetContent(desc);
-        }
+        // Determine if this piece has 1 or 2 spells and show/hide appropriate background
+        bool hasTwoSpells = piece.PieceType == "Bishop" || piece.PieceType == "Queen" || piece.PieceType == "King";
         
+        if (actionBarBG_2Spells != null) actionBarBG_2Spells.SetActive(hasTwoSpells);
+        if (actionBarBG_1Spell != null) actionBarBG_1Spell.SetActive(!hasTwoSpells);
+
+        ConfigureSingleSpellButton(spellButton1, spellButton1Icon, spellButton1CDOverlay, spellButton1CDText, piece, 0);
+        
+        // Only configure second spell button for pieces with 2 spells
+        if (hasTwoSpells)
+        {
+            ConfigureSingleSpellButton(spellButton2, spellButton2Icon, spellButton2CDOverlay, spellButton2CDText, piece, 1);
+        }
+        else
+        {
+            // Hide the second spell button for pieces with only 1 spell
+            spellButton2.gameObject.SetActive(false);
+            if (spellButton2CDOverlay != null) spellButton2CDOverlay.gameObject.SetActive(false);
+            if (spellButton2CDText != null) spellButton2CDText.gameObject.SetActive(false);
+        }
     }
-    */
+
     private void ConfigureSingleSpellButton(Button btn, Image iconImg, Image cdOverlay, TextMeshProUGUI cdText, Piece piece, int index)
     {
         // 1. 初始化隐藏 CD 遮罩
@@ -809,7 +795,7 @@ public class InputManager : MonoBehaviour
         {
             // 顺便把 Tooltip 里的蓝量消耗也变成红色，提示更明显
             string manaColor = (piece.CurrentMana < spell.ManaCost) ? "#ff4444" : "#4287f5";
-            string desc = $"<b>{spell.SpellName}</b> <size=80%><color={manaColor}>({spell.ManaCost} Mana)</color></size>\nCD: {spell.Cooldown} Turn(s)\n{spell.Description}";
+            string desc = $"<b>{spell.SpellName}</b> <size=80%><color={manaColor}>({spell.ManaCost} Mana)</color></size>\n{spell.Description}";
             trigger.SetContent(desc);
         }
     }
