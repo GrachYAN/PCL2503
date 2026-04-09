@@ -1,0 +1,64 @@
+    private void TryMoveToTarget(RaycastHit hit)
+    {
+        Vector2 targetCoords = GetCoordinatesFromHit(hit);
+
+        // 检查点击的位置是否在"高亮的可移动列表"里
+        if (IsTargetInHighlightedList(targetCoords))
+        {
+            Vector2 startPosition = selectedPiece.GetCoordinates();
+
+            // --- 核心移动逻辑开始 ---
+            if (isOfflineMode)
+            {
+                // 开始移动协程，等待动画完成后结束回合
+                StartCoroutine(PerformAnimatedMove(startPosition, targetCoords));
+            }
+            else
+            {
+                // 联机模式逻辑（网络同步需要特殊处理）
+                logicManager.RequestMoveServerRpc((int)startPosition.x, (int)startPosition.y, (int)targetCoords.x, (int)targetCoords.y);
+                ResetSelection();
+            }
+            // --- 核心移动逻辑结束 ---
+        }
+        else
+        {
+            // 点了非法格子，取消移动状态，回到选中状态
+            currentState = InputState.PieceSelected;
+            UnhighlightLegalMoves();
+            ConfigureActionButtons(selectedPiece);
+        }
+    }
+
+    /// <summary>
+    /// 执行带动画的移动，等待动画完成后结束回合
+    /// </summary>
+    private System.Collections.IEnumerator PerformAnimatedMove(Vector2 startPosition, Vector2 targetCoords)
+    {
+        if (selectedPiece == null) yield break;
+
+        // 1. 记录移动数据
+        logicManager.lastMovedPiece = selectedPiece;
+        logicManager.lastMovedPieceStartPosition = startPosition;
+
+        // 2. 执行移动（这会触发动画）
+        selectedPiece.Move(targetCoords);
+
+        // 3. 等待动画完成
+        while (selectedPiece.IsAnimating)
+        {
+            yield return null;
+        }
+
+        // 4. 更新结束位置
+        logicManager.lastMovedPieceEndPosition = selectedPiece.GetCoordinates();
+
+        // 5. 播放音效
+        if (logicManager.moveSound != null) logicManager.moveSound.Play();
+
+        // 6. 重置选择
+        ResetSelection();
+
+        // 7. 结束回合
+        logicManager.EndTurn();
+    }

@@ -1,0 +1,24 @@
+fileFormatVersion: 2
+guid: 35a84552e965bdc42a1d47339d67f377
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - targetPiece: {instanceID: 0}
+  - statusCanvas: {instanceID: 0}
+  - iconContainer: {instanceID: 0}
+  - stunIconPrefab: {fileID: 6321342445425670832, guid: ec83d4142b60a784c95075405eb055f2, type: 3}
+  - rootIconPrefab: {fileID: 8657574259871418786, guid: 1df66520e54629a4095c9008fbff0fb9, type: 3}
+  - dazeIconPrefab: {fileID: 8052065096217725821, guid: 027c2a0dffbd54a4e999e417681ee42e, type: 3}
+  - shieldIconPrefab: {fileID: 2331893251512767695, guid: 68fa42236311be944a448e71a0bf7e92, type: 3}
+  - dotFireIconPrefab: {fileID: 7269851251074922781, guid: e3e5d93e30b0adb4f8744e04604eacee, type: 3}
+  - dotArcaneIconPrefab: {instanceID: 0}
+  - dotHolyIconPrefab: {instanceID: 0}
+  - dotPhysicalIconPrefab: {instanceID: 0}
+  - buffDefenseIconPrefab: {instanceID: 0}
+  - buffAttackIconPrefab: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
