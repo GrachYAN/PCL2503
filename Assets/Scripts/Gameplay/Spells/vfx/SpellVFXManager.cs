@@ -16,6 +16,7 @@ public class SpellVFXManager : MonoBehaviour
 
     private static SpellVFXManager instance;
     private Material lineMaterial;
+    private Material orbMaterialTemplate;
 
     public static SpellVFXManager Instance
     {
@@ -69,13 +70,13 @@ public class SpellVFXManager : MonoBehaviour
                 PlayScorchingRay(caster, logicManager, targetSquare);
                 break;
             case PrismaticBarrier:
-                PlayPrismaticBarrier(caster, targetSquare);
+                PlayPrismaticBarrier(caster);
                 break;
             case PhoenixDive:
                 PlayQueenDive(caster, targetSquare);
                 break;
             case MindControl:
-                PlayMindControl(caster, logicManager, targetSquare);
+                PlayMindControl(caster);
                 break;
             case BattleRally:
                 PlayBattleRally(caster, logicManager);
@@ -187,18 +188,26 @@ public class SpellVFXManager : MonoBehaviour
         Piece target = TryGetPieceAt(logicManager, targetSquare);
         Vector3 chargePoint = GetChestPoint(caster) + Vector3.up * 0.10f;
         Vector3 beamStart = GetHeadPoint(caster) + Vector3.up * 0.02f;
-        Vector3 end = target != null ? GetChestPoint(target) : GetGroundPoint(targetSquare) + Vector3.up * 0.42f;
+        Vector3 end = target != null ? GetChestPoint(target) : GetGroundPoint(targetSquare) + Vector3.up * 0.38f;
 
-        PlayOrbCharge(chargePoint, tint, true, 0.34f, 0.48f);
-        SpawnPolyline(new[] { beamStart, end }, MultiplyColor(tint, 0.95f), 0.050f, 0.18f);
-        SpawnEffect("SpellVFX/fx_light_particle_b", end, Quaternion.identity, 0.30f, tint, 0.55f);
+        PlayFireChestCharge(chargePoint, 0.78f, 0.42f, 0.13f, true);
+        SpawnPolyline(new[] { beamStart, end }, MultiplyColor(tint, 0.96f), 0.028f, 0.16f);
+        SpawnEffect("VFX_Klaus/HCFX_Hit_10", end, Quaternion.identity, 0.18f, MultiplyAlpha(tint, 0.88f), 0.6f);
+        SpawnRingPulse(end, MultiplyAlpha(tint, 0.72f), 0.09f, 0.012f, 0.14f);
     }
 
-    private void PlayPrismaticBarrier(Piece caster, Vector2 targetSquare)
+    private void PlayPrismaticBarrier(Piece caster)
     {
-        Vector3 casterPoint = GetChestPoint(caster) + Vector3.up * 0.10f;
-        PlayOrbCharge(casterPoint, MysticColor, false, 0.30f, 0.36f);
-        SpawnEffect("VFX_Klaus/HCFX_Shine_07", casterPoint, Quaternion.identity, 0.16f, MultiplyColor(MysticColor, 1.10f), 0.24f);
+        Vector3 casterPoint = GetChestPoint(caster) + Vector3.up * 0.08f;
+        PlayMysticChestCharge(
+            casterPoint,
+            MultiplyAlpha(MultiplyColor(MysticColor, 0.90f), 0.80f),
+            MultiplyAlpha(MultiplyColor(MysticColor, 1.04f), 0.88f),
+            MultiplyAlpha(new Color(0.94f, 0.76f, 1.00f, 1.00f), 0.46f),
+            0.84f,
+            0.52f,
+            0.30f,
+            0.15f);
     }
 
     private void PlayQueenDive(Piece caster, Vector2 targetSquare)
@@ -206,11 +215,27 @@ public class SpellVFXManager : MonoBehaviour
         PlayDiveSequence(caster, targetSquare);
     }
 
-    private void PlayMindControl(Piece caster, LogicManager logicManager, Vector2 targetSquare)
+    private void PlayMindControl(Piece caster)
     {
-        Vector3 casterPoint = GetChestPoint(caster) + Vector3.up * 0.10f;
-        PlayOrbCharge(casterPoint, MindControlColor, false, 0.32f, 0.34f);
-        SpawnEffect("VFX_Klaus/HCFX_Shine_07", casterPoint, Quaternion.identity, 0.14f, MultiplyColor(MindControlColor, 1.12f), 0.22f);
+        Vector3 casterPoint = GetChestPoint(caster) + Vector3.up * 0.08f;
+        PlayMysticChestCharge(
+            casterPoint,
+            MultiplyAlpha(new Color(0.56f, 0.32f, 0.82f, 1.00f), 0.72f),
+            MultiplyAlpha(new Color(0.74f, 0.44f, 0.96f, 1.00f), 0.76f),
+            MultiplyAlpha(new Color(0.66f, 0.40f, 0.92f, 1.00f), 0.34f),
+            0.74f,
+            0.42f,
+            0.24f,
+            0.13f);
+        SpawnPolyline(
+            new[]
+            {
+                casterPoint + Vector3.left * 0.06f,
+                casterPoint + Vector3.right * 0.06f
+            },
+            MultiplyAlpha(new Color(0.72f, 0.45f, 0.94f, 1.00f), 0.32f),
+            0.010f,
+            0.10f);
     }
 
     private void PlayBattleRally(Piece caster, LogicManager logicManager)
@@ -267,42 +292,129 @@ public class SpellVFXManager : MonoBehaviour
         SpawnRingPulse(position, MultiplyColor(color, 0.9f), 0.18f, 0.03f, 0.18f);
     }
 
-    private void PlayBeamBurst(Vector3 start, Vector3 end, Color color, float width)
-    {
-        SpawnPolyline(new[] { start, end }, color, width, 0.22f);
-        SpawnEffect("VFX_Klaus/HCFX_Hit_10", end, Quaternion.identity, 0.33f, color, 1f);
-    }
-
     private void PlayDiveSequence(Piece caster, Vector2 targetSquare)
     {
         Vector3 chargePoint = GetChestPoint(caster) + Vector3.up * 0.10f;
-        Vector3 ventPoint = chargePoint + Vector3.up * 0.75f;
-        Vector3 impactPoint = GetGroundPoint(targetSquare) + Vector3.up * 0.12f;
-        Vector3 strikeStart = impactPoint + Vector3.up * 2.40f;
+        Vector3 ventPoint = chargePoint + Vector3.up * 0.52f;
+        Vector3 impactPoint = GetGroundPoint(targetSquare) + Vector3.up * 0.10f;
+        Vector3 strikeStart = impactPoint + Vector3.up * 1.85f;
 
-        PlayOrbCharge(chargePoint, FireColor, true, 0.36f, 0.50f);
-        SpawnPolyline(new[] { chargePoint, ventPoint }, MultiplyColor(FireColor, 0.88f), 0.030f, 0.15f);
-        SpawnEffect("SpellVFX/fx_light_particle_c", ventPoint, Quaternion.identity, 0.22f, FireColor, 0.28f);
-
-        SpawnEffect("SpellVFX/fx_light_particle_c", strikeStart, Quaternion.identity, 0.26f, FireColor, 0.38f);
-        SpawnPolyline(new[] { strikeStart, impactPoint }, MultiplyColor(FireColor, 0.98f), 0.065f, 0.20f);
-        SpawnEffect("SpellVFX/fx_light_particle_b", impactPoint, Quaternion.identity, 0.36f, FireColor, 0.50f);
-        SpawnRingPulse(GetGroundPoint(targetSquare), MultiplyColor(FireColor, 0.90f), 0.20f, 0.032f, 0.18f);
+        PlayFireChestCharge(chargePoint, 0.86f, 0.46f, 0.15f, false);
+        SpawnPolyline(new[] { chargePoint, ventPoint }, MultiplyAlpha(FireColor, 0.85f), 0.020f, 0.12f);
+        SpawnSimpleChargeOrb(strikeStart, FireColor, 0.05f, 0.11f, 0.12f, Vector3.down * 0.14f);
+        SpawnPolyline(new[] { strikeStart, impactPoint }, MultiplyAlpha(FireColor, 0.95f), 0.032f, 0.16f);
+        SpawnEffect("VFX_Klaus/HCFX_Hit_10", impactPoint, Quaternion.identity, 0.20f, MultiplyAlpha(FireColor, 0.88f), 0.7f);
+        SpawnRingPulse(GetGroundPoint(targetSquare), MultiplyAlpha(FireColor, 0.72f), 0.12f, 0.016f, 0.16f);
     }
 
-    private void PlayOrbCharge(Vector3 position, Color color, bool addFlame, float orbScale, float lifetime)
+    private void PlayFireChestCharge(Vector3 position, float readyScale, float burstScale, float ringRadius, bool addHeatLine)
     {
-        GameObject orb = SpawnEffect("VFX_Klaus/HCFX_Energy_06", position, Quaternion.identity, orbScale, color, lifetime);
-        if (orb != null)
+        Color readyTint = MultiplyAlpha(MultiplyColor(FireColor, 0.92f), 0.82f);
+        Color burstTint = MultiplyAlpha(MultiplyColor(FireColor, 1.04f), 0.84f);
+
+        SpawnEffect("SpellVFX/Qk_fire_arrow_01_ready_01", position, Quaternion.identity, readyScale, readyTint, 0.60f);
+        SpawnEffect("SpellVFX/Qk_fire_arrow_01_hit_01", position + Vector3.up * 0.01f, Quaternion.identity, burstScale, burstTint, 0.34f);
+        SpawnRingPulse(position, MultiplyAlpha(FireColor, 0.54f), ringRadius, 0.012f, 0.18f);
+
+        if (addHeatLine)
         {
-            StartCoroutine(AnimateRise(orb.transform, Vector3.up * 0.16f, Mathf.Min(lifetime, 0.20f)));
+            SpawnPolyline(
+                new[] { position, position + Vector3.up * 0.22f },
+                MultiplyAlpha(FireColor, 0.78f),
+                0.015f,
+                0.12f);
+        }
+    }
+
+    private void PlayMysticChestCharge(
+        Vector3 position,
+        Color auraColor,
+        Color burstColor,
+        Color coreColor,
+        float auraScale,
+        float burstScale,
+        float coreScale,
+        float ringRadius)
+    {
+        SpawnEffect("SpellVFX/Qk_ice_arrow_01_ready_01", position, Quaternion.identity, auraScale, auraColor, 0.60f);
+        SpawnEffect("SpellVFX/Qk_light_arrow_01_hit_01", position + Vector3.up * 0.01f, Quaternion.identity, burstScale, burstColor, 0.32f);
+        SpawnEffect("SpellVFX/Qk_light_arrow_01_ready_01", position + Vector3.up * 0.02f, Quaternion.identity, coreScale, coreColor, 0.34f);
+        SpawnRingPulse(position, MultiplyAlpha(burstColor, 0.50f), ringRadius, 0.012f, 0.18f);
+    }
+
+    private void SpawnSimpleChargeOrb(Vector3 position, Color color, float startScale, float endScale, float duration, Vector3 drift)
+    {
+        SpawnSimpleOrb(position, color, startScale, endScale, duration, drift);
+        SpawnSimpleOrb(
+            position,
+            MultiplyColor(color, 1.05f),
+            startScale * 1.55f,
+            endScale * 1.85f,
+            duration * 0.92f,
+            drift * 0.55f);
+    }
+
+    private void SpawnSimpleOrb(Vector3 position, Color color, float startScale, float endScale, float duration, Vector3 drift)
+    {
+        GameObject orb = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        orb.name = "SimpleChargeOrb";
+        orb.transform.position = position;
+        orb.transform.localScale = Vector3.one * Mathf.Max(0.01f, startScale);
+
+        Collider collider = orb.GetComponent<Collider>();
+        if (collider != null)
+        {
+            Destroy(collider);
         }
 
-        SpawnEffect("VFX_Klaus/HCFX_Shine_07", position, Quaternion.identity, orbScale * 0.48f, MultiplyColor(color, 1.08f), lifetime * 0.75f);
-
-        if (addFlame)
+        Renderer renderer = orb.GetComponent<Renderer>();
+        if (renderer != null)
         {
-            SpawnEffect("VFX_Klaus/HCFX_Fire_01", position, Quaternion.identity, orbScale * 0.82f, color, lifetime);
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.material = new Material(GetOrbMaterialTemplate());
+            ApplyMaterialColor(renderer.material, color);
+        }
+
+        StartCoroutine(AnimateSimpleOrb(orb, renderer, position, color, startScale, endScale, duration, drift));
+    }
+
+    private IEnumerator AnimateSimpleOrb(
+        GameObject orb,
+        Renderer renderer,
+        Vector3 startPosition,
+        Color color,
+        float startScale,
+        float endScale,
+        float duration,
+        Vector3 drift)
+    {
+        float elapsed = 0f;
+
+        while (elapsed < duration && orb != null)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            orb.transform.position = startPosition + (drift * t);
+            orb.transform.localScale = Vector3.one * Mathf.Lerp(startScale, endScale, t);
+
+            if (renderer != null)
+            {
+                Color current = MultiplyAlpha(color, 1f - (t * 0.85f));
+                ApplyMaterialColor(renderer.material, current);
+            }
+
+            yield return null;
+        }
+
+        if (renderer != null && renderer.material != null)
+        {
+            Destroy(renderer.material);
+        }
+
+        if (orb != null)
+        {
+            Destroy(orb);
         }
     }
 
@@ -715,6 +827,50 @@ public class SpellVFXManager : MonoBehaviour
         return lineMaterial;
     }
 
+    private Material GetOrbMaterialTemplate()
+    {
+        if (orbMaterialTemplate == null)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null)
+            {
+                shader = Shader.Find("Unlit/Color");
+            }
+
+            if (shader == null)
+            {
+                shader = Shader.Find("Standard");
+            }
+
+            orbMaterialTemplate = new Material(shader);
+        }
+
+        return orbMaterialTemplate;
+    }
+
+    private void ApplyMaterialColor(Material material, Color color)
+    {
+        if (material == null)
+        {
+            return;
+        }
+
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", color);
+        }
+
+        if (material.HasProperty("_Color"))
+        {
+            material.SetColor("_Color", color);
+        }
+
+        if (material.HasProperty("_EmissionColor"))
+        {
+            material.SetColor("_EmissionColor", color * 0.8f);
+        }
+    }
+
     private Color MultiplyColor(Color color, float multiplier)
     {
         return new Color(
@@ -722,5 +878,10 @@ public class SpellVFXManager : MonoBehaviour
             Mathf.Clamp01(color.g * multiplier),
             Mathf.Clamp01(color.b * multiplier),
             color.a);
+    }
+
+    private Color MultiplyAlpha(Color color, float alphaMultiplier)
+    {
+        return new Color(color.r, color.g, color.b, Mathf.Clamp01(color.a * alphaMultiplier));
     }
 }
