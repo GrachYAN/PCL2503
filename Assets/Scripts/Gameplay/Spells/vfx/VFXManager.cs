@@ -1,58 +1,128 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 public class VFXManager : MonoBehaviour
 {
-    public static VFXManager Instance;
+    public static VFXManager Instance { get; private set; }
 
-    [Header("Damage Impact VFX Prefabs")]
-    public GameObject physicalImpactPrefab; // ����������/���
-    public GameObject fireImpactPrefab;     // ���棺��ը/ȼ��
-    public GameObject arcaneImpactPrefab;   // ��������ɫ����/����
-    public GameObject holyImpactPrefab;     // ��ʥ�����/����
+    [Header("Optional Inspector Fallbacks")]
+    public GameObject physicalImpactPrefab;
+    public GameObject fireImpactPrefab;
+    public GameObject arcaneImpactPrefab;
+    public GameObject holyImpactPrefab;
 
     [Header("Settings")]
-    public float vfxYOffset = 1.0f; // ��Ч���ɵĴ�ֱƫ��������ֹ�����ڽŵף�
-    public float vfxDuration = 2.0f; // ��Ч�Զ�����ʱ��
+    public float vfxYOffset = 0.85f;
+    public float physicalScale = 0.74f;
+    public float fireScale = 0.82f;
+    public float arcaneScale = 0.80f;
+    public float holyScale = 0.82f;
+    public float vfxDuration = 1.4f;
 
-    void Awake()
+    private void Awake()
     {
-        // ����ģʽ������ȫ�ֵ���
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
     }
 
     public void PlayImpactVFX(Vector3 position, DamageType type)
     {
-        GameObject prefabToSpawn = null;
-
-        switch (type)
+        GameObject prefab = LoadImpactPrefab(type);
+        if (prefab == null)
         {
-            case DamageType.Physical:
-                prefabToSpawn = physicalImpactPrefab;
-                break;
-            case DamageType.Fire:
-                prefabToSpawn = fireImpactPrefab;
-                break;
-            case DamageType.Arcane:
-                prefabToSpawn = arcaneImpactPrefab;
-                break;
-            case DamageType.Holy: // �������� Holy ����
-                prefabToSpawn = holyImpactPrefab;
-                break;
+            return;
         }
 
-        if (prefabToSpawn != null)
+        Vector3 spawnPos = position + Vector3.up * vfxYOffset;
+        GameObject vfx = Instantiate(prefab, spawnPos, Quaternion.identity);
+        vfx.transform.localScale *= GetScale(type);
+        ApplyTint(vfx, GetTint(type));
+        Destroy(vfx, vfxDuration);
+    }
+
+    private GameObject LoadImpactPrefab(DamageType type)
+    {
+        string resourcePath = type switch
         {
-            // ��΢̧��һ��λ�ã�����Ч���������������϶����ǽŵ�
-            Vector3 spawnPos = position + Vector3.up * vfxYOffset;
+            DamageType.Physical => "Prefab/texiao/ImpactEffects/PhysicalImpact",
+            DamageType.Fire => "Prefab/texiao/ImpactEffects/FireImpact",
+            DamageType.Arcane => "Prefab/texiao/ImpactEffects/ArcaneImpact",
+            DamageType.Holy => "Prefab/texiao/ImpactEffects/HolyImpact",
+            _ => string.Empty
+        };
 
-            GameObject vfx = Instantiate(prefabToSpawn, spawnPos, Quaternion.identity);
+        if (!string.IsNullOrEmpty(resourcePath))
+        {
+            GameObject loaded = Resources.Load<GameObject>(resourcePath);
+            if (loaded != null)
+            {
+                return loaded;
+            }
+        }
 
-            // ȷ����Ч�ᳯ�������������� 2D ��ͼ����Ч�����߱���Ĭ����ת
-            // vfx.transform.LookAt(Camera.main.transform); 
+        return type switch
+        {
+            DamageType.Physical => physicalImpactPrefab,
+            DamageType.Fire => fireImpactPrefab,
+            DamageType.Arcane => arcaneImpactPrefab,
+            DamageType.Holy => holyImpactPrefab,
+            _ => null
+        };
+    }
 
-            Destroy(vfx, vfxDuration);
+    private float GetScale(DamageType type)
+    {
+        return type switch
+        {
+            DamageType.Physical => 0.78f,
+            DamageType.Fire => 0.82f,
+            DamageType.Arcane => 0.76f,
+            DamageType.Holy => 0.84f,
+            _ => 1f
+        };
+    }
+
+    private Color GetTint(DamageType type)
+    {
+        return type switch
+        {
+            DamageType.Physical => SpellVFXManager.PhysicalColor,
+            DamageType.Fire => SpellVFXManager.FireColor,
+            DamageType.Arcane => SpellVFXManager.ArcaneColor,
+            DamageType.Holy => SpellVFXManager.HolyColor,
+            _ => Color.white
+        };
+    }
+
+    private void ApplyTint(GameObject instanceObject, Color tint)
+    {
+        if (instanceObject == null)
+        {
+            return;
+        }
+
+        foreach (ParticleSystem particleSystem in instanceObject.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            ParticleSystem.MainModule main = particleSystem.main;
+            main.startColor = tint;
+        }
+
+        foreach (Renderer renderer in instanceObject.GetComponentsInChildren<Renderer>(true))
+        {
+            Material material = renderer.material;
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", tint);
+            }
+
+            if (material.HasProperty("_Color"))
+            {
+                material.SetColor("_Color", tint);
+            }
         }
     }
 }

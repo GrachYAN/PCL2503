@@ -179,6 +179,11 @@ public abstract class Spell
             GameSoundManager.Instance.BeginSpellExecution();
         }
 
+        if (SpellVFXManager.Instance != null)
+        {
+            SpellVFXManager.Instance.PlaySpellVFX(this, Caster, LogicManager, targetSquare);
+        }
+
         // 执行技能效果
         ExecuteEffect(targetSquare);
 

@@ -521,6 +521,7 @@ public class LogicManager : NetworkBehaviour
         if (piece == null) return;
 
         Vector2 coords = piece.GetCoordinates();
+        RemoveFlameMarkAtPosition(coords);
 
         DestroyedPieceInfo info = new DestroyedPieceInfo
         {
@@ -664,7 +665,8 @@ public class LogicManager : NetworkBehaviour
     private void RunTurnStartPhase(bool activeTurnIsWhite)
     {
         UpdatePiecesOnBoard();
-        foreach (Piece piece in piecesOnBoard)
+        List<Piece> turnStartSnapshot = new List<Piece>(piecesOnBoard);
+        foreach (Piece piece in turnStartSnapshot)
         {
             piece?.OnTurnStart(activeTurnIsWhite);
         }
@@ -1181,14 +1183,25 @@ public class LogicManager : NetworkBehaviour
         }
     }
 
-    public void PlaceFlameMark(Vector2 position, int duration)
+    public void PlaceFlameMark(Vector2 position, int duration, DamageType damageType = DamageType.Fire)
     {
-        if (flameMarkPrefab == null)
+        RemoveFlameMarkAtPosition(position);
+
+        Color tint = damageType == DamageType.Holy ? SpellVFXManager.HolyColor : SpellVFXManager.FireColor;
+        GameObject markGO = SpellVFXManager.Instance != null
+            ? SpellVFXManager.Instance.CreatePersistentTileMarker(position, tint, 0.28f, 0.042f)
+            : null;
+
+        if (markGO == null && flameMarkPrefab != null)
         {
-            Debug.LogError("Flame Mark Prefab is not assigned in LogicManager!");
+            markGO = Instantiate(flameMarkPrefab, new Vector3(position.x, 0.02f, position.y), Quaternion.identity);
+        }
+
+        if (markGO == null)
+        {
             return;
         }
-        GameObject markGO = Instantiate(flameMarkPrefab, new Vector3(position.x, 0, position.y), Quaternion.identity);
+
         activeFlameMarks.Add(new FlameMarkInstance
         {
             Position = position,
@@ -1202,12 +1215,53 @@ public class LogicManager : NetworkBehaviour
         for (int i = activeFlameMarks.Count - 1; i >= 0; i--)
         {
             var mark = activeFlameMarks[i];
+
+            Piece occupant = null;
+            int x = Mathf.RoundToInt(mark.Position.x);
+            int y = Mathf.RoundToInt(mark.Position.y);
+            if (x >= 0 && x < 8 && y >= 0 && y < 8)
+            {
+                occupant = boardMap[x, y];
+            }
+
+            if (occupant == null || !occupant.IsBurning)
+            {
+                if (mark.PrefabInstance != null)
+                {
+                    Destroy(mark.PrefabInstance);
+                }
+                activeFlameMarks.RemoveAt(i);
+                continue;
+            }
+
             mark.RemainingRounds--;
             if (mark.RemainingRounds <= 0)
             {
-                Destroy(mark.PrefabInstance);
+                if (mark.PrefabInstance != null)
+                {
+                    Destroy(mark.PrefabInstance);
+                }
                 activeFlameMarks.RemoveAt(i);
             }
+        }
+    }
+
+    private void RemoveFlameMarkAtPosition(Vector2 position)
+    {
+        for (int i = activeFlameMarks.Count - 1; i >= 0; i--)
+        {
+            FlameMarkInstance mark = activeFlameMarks[i];
+            if (Vector2.Distance(mark.Position, position) > 0.01f)
+            {
+                continue;
+            }
+
+            if (mark.PrefabInstance != null)
+            {
+                Destroy(mark.PrefabInstance);
+            }
+
+            activeFlameMarks.RemoveAt(i);
         }
     }
 

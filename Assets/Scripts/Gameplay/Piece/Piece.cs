@@ -122,6 +122,11 @@ public abstract class Piece : MonoBehaviour
     {
         logicManager = Object.FindFirstObjectByType<LogicManager>();
         UpdateBoardMap();
+
+        if (GetComponent<PieceStatusVFXController>() == null)
+        {
+            gameObject.AddComponent<PieceStatusVFXController>();
+        }
     }
 
     public Vector2 GetCoordinates()

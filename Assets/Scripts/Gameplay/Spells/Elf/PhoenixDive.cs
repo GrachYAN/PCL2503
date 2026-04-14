@@ -46,13 +46,12 @@ public class PhoenixDive : Spell
         Piece targetPiece = LogicManager.boardMap[(int)target.x, (int)target.y];
         if (targetPiece != null)
         {
-            // Determine damage type based on faction: Fire for Elf, Holy for Dwarf
-            DamageType damageType = (Caster.ResolvedFaction == Faction.Dwarf) ? DamageType.Holy : DamageType.Fire;
+            DamageType damageType = DamageType.Fire;
 
             targetPiece.ApplyStun(3); 
             targetPiece.ApplyDamageOverTime(4, damageType, 3); 
 
-            LogicManager.PlaceFlameMark(target, 3);
+            LogicManager.PlaceFlameMark(target, 3, damageType);
         }
     }
 }
