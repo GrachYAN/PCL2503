@@ -13,10 +13,10 @@ public class SpellVFXManager : MonoBehaviour
     public static readonly Color StunColor = new Color(1.00f, 0.88f, 0.36f, 0.92f);
     public static readonly Color MindControlColor = MysticColor;
     public static readonly Color BuffColor = new Color(0.55f, 1.00f, 0.72f, 0.92f);
-
     private static SpellVFXManager instance;
     private Material lineMaterial;
     private Material orbMaterialTemplate;
+    private readonly HashSet<string> missingPrefabWarnings = new HashSet<string>();
 
     public static SpellVFXManager Instance
     {
@@ -85,10 +85,10 @@ public class SpellVFXManager : MonoBehaviour
                 PlayRampartAura(caster, logicManager);
                 break;
             case HeartOfTheMountain:
-                PlayTeamBuff(caster, logicManager, BuffColor, "VFX_Klaus/HCFX_Energy_06");
+                PlayTeamBuff(caster, logicManager, BuffColor, "HCFX/HCFX_Energy_06");
                 break;
             case SunwellAnthem:
-                PlayTeamBuff(caster, logicManager, HolyColor, "VFX_Klaus/HCFX_Shine_07");
+                PlayTeamBuff(caster, logicManager, HolyColor, "HCFX/HCFX_Shine_07");
                 break;
             case AshenRebirth:
                 PlayReviveBlessing(caster, targetSquare);
@@ -174,7 +174,7 @@ public class SpellVFXManager : MonoBehaviour
 
         SpawnRingPulse(GetGroundPoint(targetSquare), MultiplyColor(tint, 0.95f), heavy ? 0.38f : 0.30f, heavy ? 0.055f : 0.04f, 0.22f);
         SpawnPolyline(new[] { source, impactPoint }, MultiplyColor(tint, 0.78f), heavy ? 0.06f : 0.04f, 0.14f);
-        SpawnEffect("VFX_Klaus/HCFX_Hit_10",
+        SpawnEffect("HCFX/HCFX_Hit_10",
             impactPoint,
             Quaternion.LookRotation(flatDir.normalized, Vector3.up),
             heavy ? 0.34f : 0.24f,
@@ -192,7 +192,7 @@ public class SpellVFXManager : MonoBehaviour
 
         PlayFireChestCharge(chargePoint, 0.78f, 0.42f, 0.13f, true);
         SpawnPolyline(new[] { beamStart, end }, MultiplyColor(tint, 0.96f), 0.028f, 0.16f);
-        SpawnEffect("VFX_Klaus/HCFX_Hit_10", end, Quaternion.identity, 0.18f, MultiplyAlpha(tint, 0.88f), 0.6f);
+        SpawnEffect("HCFX/HCFX_Hit_10", end, Quaternion.identity, 0.18f, MultiplyAlpha(tint, 0.88f), 0.6f);
         SpawnRingPulse(end, MultiplyAlpha(tint, 0.72f), 0.09f, 0.012f, 0.14f);
     }
 
@@ -259,14 +259,14 @@ public class SpellVFXManager : MonoBehaviour
     {
         PlaySubtleCharge(GetHeadPoint(caster), HolyColor);
         SpawnRingPulse(GetGroundPoint(targetSquare), HolyColor, 0.42f, 0.048f, 0.34f);
-        SpawnEffect("VFX_Klaus/HCFX_Shine_07", GetGroundPoint(targetSquare) + Vector3.up * 0.12f, Quaternion.identity, 0.46f, HolyColor, 1.2f);
+        SpawnEffect("HCFX/HCFX_Shine_07", GetGroundPoint(targetSquare) + Vector3.up * 0.12f, Quaternion.identity, 0.46f, HolyColor, 1.2f);
     }
 
     private void PlayRampartAura(Piece caster, LogicManager logicManager)
     {
         PlaySubtleCharge(GetGroundPoint(caster.GetCoordinates()), HolyColor);
         SpawnRingPulse(GetGroundPoint(caster.GetCoordinates()), HolyColor, 0.55f, 0.055f, 0.34f);
-        SpawnTileField(GetRampartProtectedSquares(caster, logicManager), MultiplyColor(HolyColor, 0.9f), "VFX_Klaus/HCFX_Shine_07");
+        SpawnTileField(GetRampartProtectedSquares(caster, logicManager), MultiplyColor(HolyColor, 0.9f), "HCFX/HCFX_Shine_07");
     }
 
     private void PlayTeamBuff(Piece caster, LogicManager logicManager, Color tint, string tileEffectPath)
@@ -282,7 +282,7 @@ public class SpellVFXManager : MonoBehaviour
         Vector3 targetPoint = GetGroundPoint(targetSquare) + Vector3.up * 0.15f;
 
         PlaySubtleCharge(casterPoint, FireColor);
-        SpawnEffect("VFX_Klaus/HCFX_Portal_01", targetPoint, Quaternion.identity, 0.42f, FireColor, 1.8f);
+        SpawnEffect("HCFX/HCFX_Portal_01", targetPoint, Quaternion.identity, 0.42f, FireColor, 1.8f);
         SpawnRingPulse(GetGroundPoint(targetSquare), FireColor, 0.36f, 0.04f, 0.38f);
         SpawnPolyline(new[] { casterPoint, targetPoint + Vector3.up * 0.55f }, MultiplyColor(FireColor, 0.85f), 0.04f, 0.20f);
     }
@@ -303,7 +303,7 @@ public class SpellVFXManager : MonoBehaviour
         SpawnPolyline(new[] { chargePoint, ventPoint }, MultiplyAlpha(FireColor, 0.85f), 0.020f, 0.12f);
         SpawnSimpleChargeOrb(strikeStart, FireColor, 0.05f, 0.11f, 0.12f, Vector3.down * 0.14f);
         SpawnPolyline(new[] { strikeStart, impactPoint }, MultiplyAlpha(FireColor, 0.95f), 0.032f, 0.16f);
-        SpawnEffect("VFX_Klaus/HCFX_Hit_10", impactPoint, Quaternion.identity, 0.20f, MultiplyAlpha(FireColor, 0.88f), 0.7f);
+        SpawnEffect("HCFX/HCFX_Hit_10", impactPoint, Quaternion.identity, 0.20f, MultiplyAlpha(FireColor, 0.88f), 0.7f);
         SpawnRingPulse(GetGroundPoint(targetSquare), MultiplyAlpha(FireColor, 0.72f), 0.12f, 0.016f, 0.16f);
     }
 
@@ -312,8 +312,8 @@ public class SpellVFXManager : MonoBehaviour
         Color readyTint = MultiplyAlpha(MultiplyColor(FireColor, 0.92f), 0.82f);
         Color burstTint = MultiplyAlpha(MultiplyColor(FireColor, 1.04f), 0.84f);
 
-        SpawnEffect("SpellVFX/Qk_fire_arrow_01_ready_01", position, Quaternion.identity, readyScale, readyTint, 0.60f);
-        SpawnEffect("SpellVFX/Qk_fire_arrow_01_hit_01", position + Vector3.up * 0.01f, Quaternion.identity, burstScale, burstTint, 0.34f);
+        SpawnEffect("QK/Qk_fire_arrow_01_ready_01", position, Quaternion.identity, readyScale, readyTint, 0.60f);
+        SpawnEffect("QK/Qk_fire_arrow_01_hit_01", position + Vector3.up * 0.01f, Quaternion.identity, burstScale, burstTint, 0.34f);
         SpawnRingPulse(position, MultiplyAlpha(FireColor, 0.54f), ringRadius, 0.012f, 0.18f);
 
         if (addHeatLine)
@@ -336,9 +336,9 @@ public class SpellVFXManager : MonoBehaviour
         float coreScale,
         float ringRadius)
     {
-        SpawnEffect("SpellVFX/Qk_ice_arrow_01_ready_01", position, Quaternion.identity, auraScale, auraColor, 0.60f);
-        SpawnEffect("SpellVFX/Qk_light_arrow_01_hit_01", position + Vector3.up * 0.01f, Quaternion.identity, burstScale, burstColor, 0.32f);
-        SpawnEffect("SpellVFX/Qk_light_arrow_01_ready_01", position + Vector3.up * 0.02f, Quaternion.identity, coreScale, coreColor, 0.34f);
+        SpawnEffect("QK/Qk_ice_arrow_01_ready_01", position, Quaternion.identity, auraScale, auraColor, 0.60f);
+        SpawnEffect("QK/Qk_light_arrow_01_hit_01", position + Vector3.up * 0.01f, Quaternion.identity, burstScale, burstColor, 0.32f);
+        SpawnEffect("QK/Qk_light_arrow_01_ready_01", position + Vector3.up * 0.02f, Quaternion.identity, coreScale, coreColor, 0.34f);
         SpawnRingPulse(position, MultiplyAlpha(burstColor, 0.50f), ringRadius, 0.012f, 0.18f);
     }
 
@@ -589,13 +589,19 @@ public class SpellVFXManager : MonoBehaviour
 
     private GameObject LoadPrefab(string path)
     {
-        foreach (string candidate in GetCandidateResourcePaths(path))
+        List<string> candidates = GetCandidateResourcePaths(path).ToList();
+        foreach (string candidate in candidates)
         {
             GameObject prefab = Resources.Load<GameObject>(candidate);
             if (prefab != null)
             {
                 return prefab;
             }
+        }
+
+        if (!string.IsNullOrWhiteSpace(path) && missingPrefabWarnings.Add(path))
+        {
+            Debug.LogWarning($"SpellVFXManager could not load prefab '{path}'. Tried: {string.Join(", ", candidates)}");
         }
 
         return null;
@@ -614,7 +620,11 @@ public class SpellVFXManager : MonoBehaviour
         int slashIndex = normalized.LastIndexOf('/');
         if (slashIndex >= 0 && slashIndex < normalized.Length - 1)
         {
-            yield return normalized.Substring(slashIndex + 1);
+            string fileNameOnly = normalized.Substring(slashIndex + 1);
+            if (fileNameOnly != normalized)
+            {
+                yield return fileNameOnly;
+            }
         }
     }
 

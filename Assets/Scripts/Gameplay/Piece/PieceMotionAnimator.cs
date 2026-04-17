@@ -222,7 +222,7 @@ public class PieceMotionAnimator : MonoBehaviour
     public bool PlayMoveAnimation(Vector3 targetGroundPos, Action onComplete = null)
     {
         // 输入保护：只在真正的动画状态下才阻止，Lifting 状态应该允许移动
-        if (CurrentState == PieceAnimationState.Moving || CurrentState == PieceAnimationState.Dropping)
+        if (CurrentState == PieceAnimationState.Moving)
         {
             Debug.LogWarning($"[{nameof(PieceMotionAnimator)}] 无法移动：当前正在动画中 - {CurrentState}");
             return false;

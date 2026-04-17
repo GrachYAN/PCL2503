@@ -14,9 +14,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Game.unity
     guid: 524872d1efdc02c46a43883ddd11f981
-  - enabled: 1
-    path: Assets/Scenes/VFXGeneratorScene.unity
-    guid: c3f9a9e2c6c90d5408ff036e3bbd624d
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

@@ -23,9 +23,9 @@ public class PieceStatusVFXController : MonoBehaviour
             }
         }
 
-        SyncStatusEffect(ref stunEffect, piece.IsStunned, "BuffVFX/xuanyun", SpellVFXManager.StunColor, 0.78f, 0.10f);
-        SyncStatusEffect(ref mindControlEffect, piece.IsMindControlled, "BuffVFX/shuimian", SpellVFXManager.MindControlColor, 0.56f, 0.18f);
-        SyncBodyStatusEffect(ref burningEffect, piece.IsBurning, "BuffVFX/ranshao", SpellVFXManager.FireColor, 0.42f, -0.20f);
+        SyncStatusEffect(ref stunEffect, piece.IsStunned, "BUFF/xuanyun", SpellVFXManager.StunColor, 0.78f, 0.10f);
+        SyncStatusEffect(ref mindControlEffect, piece.IsMindControlled, "BUFF/shuimian", SpellVFXManager.MindControlColor, 0.56f, 0.18f);
+        SyncBodyStatusEffect(ref burningEffect, piece.IsBurning, "BUFF/ranshao", SpellVFXManager.FireColor, 0.42f, -0.20f);
     }
 
     private void OnDisable()
