@@ -1,4 +1,4 @@
-﻿﻿
+﻿using System;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -181,10 +181,11 @@ public abstract class Spell
             GameSoundManager.Instance.BeginSpellExecution();
         }
 
-        if (SpellVFXManager.Instance != null)
-        {
-            SpellVFXManager.Instance.PlaySpellVFX(this, Caster, LogicManager, targetSquare);
-        }
+        // if (SpellVFXManager.Instance != null)
+        // {
+        //     SpellVFXManager.Instance.PlaySpellVFX(this, Caster, LogicManager, targetSquare);
+        // }
+        PlaySpellVfxSafely(targetSquare);
 
         // 执行技能效果
         ExecuteEffect(targetSquare);
@@ -222,10 +223,11 @@ public abstract class Spell
             GameSoundManager.Instance.BeginSpellExecution();
         }
 
-        if (SpellVFXManager.Instance != null)
-        {
-            SpellVFXManager.Instance.PlaySpellVFX(this, Caster, LogicManager, targetSquare);
-        }
+        // if (SpellVFXManager.Instance != null)
+        // {
+        //     SpellVFXManager.Instance.PlaySpellVFX(this, Caster, LogicManager, targetSquare);
+        // }
+        PlaySpellVfxSafely(targetSquare);
 
         IsReplayingAuthorizedCast = true;
         try
@@ -246,6 +248,25 @@ public abstract class Spell
     }
 
     protected abstract void ExecuteEffect(Vector2 targetSquare);
+
+    private void PlaySpellVfxSafely(Vector2 targetSquare)
+    {
+        SpellVFXManager vfxManager = SpellVFXManager.Instance;
+        if (vfxManager == null)
+        {
+            return;
+        }
+
+        try
+        {
+            vfxManager.PlaySpellVFX(this, Caster, LogicManager, targetSquare);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"Spell VFX failed for '{SpellName}', continuing with gameplay logic. Exception: {ex.Message}");
+        }
+    }
+
 
     public virtual void OnTurnStart()
     {
