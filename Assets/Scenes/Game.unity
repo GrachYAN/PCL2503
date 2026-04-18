@@ -6138,7 +6138,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   panel: {fileID: 1646993087}
-  winnerText: {fileID: 121710407}
+  winnerText: {fileID: 1233398132}
 --- !u!4 &2075005904
 Transform:
   m_ObjectHideFlags: 0

@@ -571,9 +571,52 @@ public class LogicManager : NetworkBehaviour
         // TODO: 检查被摧毁的是否是 King，如果是，则游戏结束
         if (piece is King)
         {
-            string result = piece.IsWhite ? "Black wins" : "White wins";
+            // string result = piece.IsWhite ? "Black wins" : "White wins";
+            bool winnerIsWhite = !piece.IsWhite;
+            string winnerName = GetWinnerDisplayName(winnerIsWhite);
+            string result = $"{winnerName} Wins";
             gameOverUI.ShowGameOver(result);
             Time.timeScale = 0;
+        }
+    }
+
+
+    private string GetWinnerDisplayName(bool winnerIsWhite)
+    {
+        // Prefer live board data (actual spawned faction for that side).
+        Piece winnerSidePiece = piecesOnBoard.FirstOrDefault(p => p != null && p.IsWhite == winnerIsWhite);
+        if (winnerSidePiece != null)
+        {
+            return GetFactionDisplayName(winnerSidePiece.ResolvedFaction);
+        }
+
+        // Fallback to pre-game faction selection seat mapping.
+        Faction fallbackFaction = winnerIsWhite ? Faction.Elf : Faction.Dwarf;
+        if (FactionSelectionManager.Instance != null)
+        {
+            int seat = winnerIsWhite ? 0 : 1;
+            fallbackFaction = FactionSelectionManager.Instance.ResolveFaction(
+                FactionSelectionManager.Instance.GetFactionForSeat(seat)
+            );
+        }
+
+        return GetFactionDisplayName(fallbackFaction);
+    }
+
+    private string GetFactionDisplayName(Faction faction)
+    {
+        switch (faction)
+        {
+            case Faction.Elf:
+                return "Blood Elf";
+            case Faction.Dwarf:
+                return "Dwarf";
+            case Faction.Undead:
+                return "Undead";
+            case Faction.Pandaren:
+                return "Pandaren";
+            default:
+                return faction.ToString();
         }
     }
 
