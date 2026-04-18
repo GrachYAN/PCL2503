@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using System.Collections.Generic;
+﻿﻿﻿﻿﻿﻿﻿﻿using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
@@ -149,7 +149,7 @@ public abstract class Piece : MonoBehaviour
     /// <param name="newPosition">目标位置</param>
     public virtual void Move(Vector2 newPosition)
     {
-        Move(newPosition, true);
+        Move(newPosition, true, false);
     }
 
     /// <summary>
@@ -157,21 +157,21 @@ public abstract class Piece : MonoBehaviour
     /// </summary>
     /// <param name="newPosition">目标位置</param>
     /// <param name="animate">是否播放动画</param>
-    public virtual void Move(Vector2 newPosition, bool animate = true)
+    public virtual void Move(Vector2 newPosition, bool animate = true, bool ignoreRestrictions = false)
     {
-        if (IsStunned)
+        if (!ignoreRestrictions && IsStunned)
         {
             Debug.Log($"{PieceType} 处于眩晕状态，无法移动。");
             return;
         }
 
-        if (IsRooted)
+        if (!ignoreRestrictions && IsRooted)
         {
             Debug.Log($"{PieceType} 被定身，无法移动。");
             return;
         }
 
-        if (!IsDestinationAvailable(newPosition))
+        if (!ignoreRestrictions && !IsDestinationAvailable(newPosition))
         {
             Debug.LogWarning($"{PieceType} 无法移动到 ({newPosition.x}, {newPosition.y})，格子被占用。");
             heartBonusTargetMap.Clear();
@@ -182,7 +182,7 @@ public abstract class Piece : MonoBehaviour
 
         if (heartBonusTargetMap.TryGetValue(newPosition, out Vector2 intermediatePosition))
         {
-            if (!IsDestinationAvailable(intermediatePosition))
+            if (!ignoreRestrictions && !IsDestinationAvailable(intermediatePosition))
             {
                 Debug.LogWarning($"{PieceType} 无法执行额外步数，路径被阻挡。");
                 heartBonusTargetMap.Clear();
@@ -416,6 +416,11 @@ public abstract class Piece : MonoBehaviour
     {
         CurrentMana += amount;
         if (CurrentMana > MaxMana) CurrentMana = MaxMana;
+    }
+
+    public void SetMana(int amount)
+    {
+        CurrentMana = Mathf.Clamp(amount, 0, MaxMana);
     }
 
     public void LoseMana(int amount)

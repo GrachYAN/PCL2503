@@ -1,4 +1,4 @@
-﻿
+﻿﻿
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -62,9 +62,11 @@ public abstract class Spell
     public int Cooldown;
     public int CurrentCooldown { get; protected set; }
     public bool EndsTurn = true;
+    public virtual bool HandlesCasterDeselectionAnimation => false;
 
     protected Piece Caster;
     protected LogicManager LogicManager;
+    protected bool IsReplayingAuthorizedCast { get; private set; }
 
     public virtual void Initialize(Piece caster, LogicManager logicManager)
     {
@@ -194,6 +196,51 @@ public abstract class Spell
         }
 
         Debug.Log($"{Caster.PieceType} 使用了 {SpellName}！");
+
+        Caster.OnSpellCast();
+    }
+
+    /// <summary>
+    /// Replays an already server-authorized cast on clients without re-validating
+    /// local mana/cooldown state. This prevents client-side desync from blocking
+    /// spell execution.
+    /// </summary>
+    public virtual void ReplayAuthorizedCast(Vector2 targetSquare, int authoritativeCasterMana, int authoritativeCooldown)
+    {
+        if (Caster == null)
+        {
+            return;
+        }
+
+        // Align local resource/cooldown state to authoritative server result first.
+        Caster.SetMana(authoritativeCasterMana);
+        CurrentCooldown = Mathf.Max(0, authoritativeCooldown);
+
+        // Keep the same audiovisual path as Cast(), but skip CanCast/UseMana checks.
+        if (GameSoundManager.Instance != null)
+        {
+            GameSoundManager.Instance.BeginSpellExecution();
+        }
+
+        if (SpellVFXManager.Instance != null)
+        {
+            SpellVFXManager.Instance.PlaySpellVFX(this, Caster, LogicManager, targetSquare);
+        }
+
+        IsReplayingAuthorizedCast = true;
+        try
+        {
+            ExecuteEffect(targetSquare);
+        }
+        finally
+        {
+            IsReplayingAuthorizedCast = false;
+        }
+
+        if (GameSoundManager.Instance != null)
+        {
+            GameSoundManager.Instance.EndSpellExecution();
+        }
 
         Caster.OnSpellCast();
     }

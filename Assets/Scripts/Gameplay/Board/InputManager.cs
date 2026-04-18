@@ -370,7 +370,12 @@ public class InputManager : MonoBehaviour
             {
                 // 联机模式逻辑（网络同步需要特殊处理）
                 logicManager.RequestMoveServerRpc((int)startPosition.x, (int)startPosition.y, (int)targetCoords.x, (int)targetCoords.y);
-                ResetSelection();
+                // IMPORTANT:
+                // Do NOT play local "cancel selection" drop animation here.
+                // The authoritative move animation (lift -> move -> drop) is already
+                // being driven by the server move path and mirrored by RPC.
+                // Playing a local deselection drop can interrupt the move coroutine.
+                ResetSelection(playPieceDropAnimation: false);
             }
             // --- 核心移动逻辑结束 ---
         }
@@ -419,6 +424,7 @@ public class InputManager : MonoBehaviour
     private void TryCastAtTarget(RaycastHit hit)
     {
         Vector2 targetCoords = GetCoordinatesFromHit(hit);
+        bool suppressDropAnimationOnReset = false;
         
         // 检查点击的位置是否有效
         if (IsTargetInHighlightedList(targetCoords))
@@ -540,11 +546,16 @@ public class InputManager : MonoBehaviour
                         spellIndex,
                         castData
                     );
+                    // Only suppress local deselection drop for spells that handle
+                    // caster animation lifecycle themselves (e.g. Battle Rally).
+                    // For regular spells, we still want ResetSelection to drop the
+                    // lifted caster back to ground.
+                    suppressDropAnimationOnReset = selectedSpell.HandlesCasterDeselectionAnimation;
                 }
             }
 
             // 4. 重置选择状态
-            ResetSelection();
+            ResetSelection(playPieceDropAnimation: !suppressDropAnimationOnReset);
         }
         else
         {
@@ -832,7 +843,7 @@ public class InputManager : MonoBehaviour
 
     // ========================= HELPER METHODS =========================
 
-    private void ResetSelection(bool cancelSpell = false)
+    private void ResetSelection(bool cancelSpell = false, bool playPieceDropAnimation = true)
     {
         UnhighlightSelectedSquare();
         UnhighlightLegalMoves();
@@ -840,7 +851,7 @@ public class InputManager : MonoBehaviour
         if (cancelSpell && selectedSpell != null) selectedSpell.CancelTargeting();
 
         // 播放取消选中落下动画
-        if (selectedPiece != null)
+        if (playPieceDropAnimation && selectedPiece != null)
         {
             PlayPieceDeselectionAnimation(selectedPiece);
         }

@@ -363,6 +363,12 @@ public class PieceMotionAnimator : MonoBehaviour
         // 阶段1：确保已升起
         if (!IsLifted)
         {
+            // 在“未先选中直接移动”（常见于网络同步远端客户端）时，
+            // 必须先基于当前地面状态计算 liftTargetY。
+            // 否则 liftTargetY 会沿用默认值(0)或旧值，导致动画顺序看起来像
+            // “先下沉(drop) -> 平移(move) -> 最后上升(lift)”。
+            CaptureGroundState();
+            liftTargetY = groundY + (pieceHeight * liftHeightMultiplier);
             yield return StartCoroutine(LiftCoroutine(null));
         }
         

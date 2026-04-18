@@ -282,7 +282,7 @@ public class LogicManager : NetworkBehaviour
         Debug.Log($"Server: Executing spell '{spell.SpellName}'");
         spell.ApplyCastData(castData);
         spell.Cast(targetCoords);
-        CastSpellClientRpc(pieceX, pieceY, spellIndex, castData);
+        CastSpellClientRpc(pieceX, pieceY, spellIndex, castData, piece.CurrentMana, spell.CurrentCooldown);
         // --- 4. End Turn ---
         //EndTurn(); // This flips the m_IsWhiteTurn_Network variable
 
@@ -299,7 +299,15 @@ public class LogicManager : NetworkBehaviour
     [ClientRpc]
     private void MovePieceClientRpc(int startX, int startY, int endX, int endY)
     {
-        // This code now runs on EVERY client (including the server)
+        // The server already executed the authoritative move in RequestMoveServerRpc.
+        // On Host, this ClientRpc is invoked again on the same objects, which would
+        // trigger duplicate animation coroutines and desync board state.
+        if (IsServer)
+        {
+            return;
+        }
+
+        // This runs on remote clients to mirror the server-authoritative move.
         Piece piece = boardMap[startX, startY];
         if (piece == null) return; // Should not happen if validation passed
 
@@ -320,9 +328,16 @@ public class LogicManager : NetworkBehaviour
     }
 
     [ClientRpc]
-    private void CastSpellClientRpc(int pieceX, int pieceY, int spellIndex, SpellCastData castData)
+    private void CastSpellClientRpc(int pieceX, int pieceY, int spellIndex, SpellCastData castData, int authoritativeMana, int authoritativeCooldown)
     {
-        // This code now runs on EVERY client (including the server)
+        // Same rationale as movement: server already applied the spell effect.
+        // Skip host-side duplicate execution to avoid applying spell logic twice.
+        if (IsServer)
+        {
+            return;
+        }
+
+        // This runs on remote clients to mirror the server-authoritative spell cast.
         Piece piece = boardMap[pieceX, pieceY];
         if (piece == null) return;
         if (spellIndex < 0 || spellIndex >= piece.Spells.Count) return;
@@ -330,9 +345,9 @@ public class LogicManager : NetworkBehaviour
         Spell spell = piece.Spells[spellIndex];
         Vector2 targetCoords = new Vector2(castData.PrimaryX, castData.PrimaryY);
 
-        // This casts the spell on everyone's local game
+        // Replay the already server-authorized cast without local validity checks.
         spell.ApplyCastData(castData);
-        spell.Cast(targetCoords);
+        spell.ReplayAuthorizedCast(targetCoords, authoritativeMana, authoritativeCooldown);
     }
 
     [ClientRpc]

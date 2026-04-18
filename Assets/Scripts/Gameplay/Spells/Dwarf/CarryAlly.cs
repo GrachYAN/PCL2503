@@ -15,6 +15,7 @@ public class CarryAlly : Spell
     private Vector2Int? pendingAlly;
     private Vector2Int? pendingDestination;
     private Vector2Int? pendingDrop;
+    public override bool HandlesCasterDeselectionAnimation => true;
 
     public CarryAlly()
     {
@@ -190,20 +191,50 @@ public class CarryAlly : Spell
 
     public override void Cast(Vector2 targetSquare)
     {
-        // Gryphon 在技能释放时保持升起状态
-        // 如果 Gryphon 还没有升起，先升起
+        if (!CanCast())
+        {
+            return;
+        }
+
+        int manaCost = GetEffectiveManaCost();
+        int cooldown = GetEffectiveCooldown();
+
+        // IMPORTANT:
+        // Deduct mana/cooldown synchronously so server RPC can immediately
+        // broadcast authoritative resource state to clients.
+        if (!Caster.UseMana(manaCost))
+        {
+            return;
+        }
+
+        CurrentCooldown = cooldown;
+
+        if (GameSoundManager.Instance != null)
+        {
+            GameSoundManager.Instance.BeginSpellExecution();
+        }
+
+        if (SpellVFXManager.Instance != null)
+        {
+            SpellVFXManager.Instance.PlaySpellVFX(this, Caster, LogicManager, targetSquare);
+        }
+
+        // Keep original visual intent: if Gryphon not lifted, lift first then execute.
         if (Caster != null && !Caster.MotionAnimator.IsLifted)
         {
-            Caster.MotionAnimator.PlayLiftAnimation(() =>
-            {
-                base.Cast(targetSquare);
-            });
+            Caster.MotionAnimator.PlayLiftAnimation(() => ExecuteEffect(targetSquare));
         }
         else
         {
-            // 已经升起，直接执行技能
-            base.Cast(targetSquare);
+            ExecuteEffect(targetSquare);
         }
+
+        if (GameSoundManager.Instance != null)
+        {
+            GameSoundManager.Instance.EndSpellExecution();
+        }
+
+        Caster.OnSpellCast();
     }
 
     protected override void ExecuteEffect(Vector2 targetSquare)
@@ -236,6 +267,17 @@ public class CarryAlly : Spell
 
     private System.Collections.IEnumerator ExecuteCarryAllyAnimation(Piece ally, Vector2Int destPos, Vector2Int dropPos)
     {
+        // 0. 确保 Gryphon 已升起（视觉上与原设计一致）
+        if (!Caster.MotionAnimator.IsLifted)
+        {
+            bool gryphonLiftComplete = false;
+            Caster.MotionAnimator.PlayLiftAnimation(() => gryphonLiftComplete = true);
+            while (!gryphonLiftComplete)
+            {
+                yield return null;
+            }
+        }
+
         // 1. 让友军保持悬停状态（选中时已经升起）
         // 确保友军已经完成升起动画
         while (ally.MotionAnimator.CurrentState == PieceAnimationState.Lifting)

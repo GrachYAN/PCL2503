@@ -5,6 +5,7 @@ public class BattleRally : Spell
 {
     private const int MaxSelections = 3;
     private readonly List<Vector2Int> selectedPieces = new List<Vector2Int>();
+    public override bool HandlesCasterDeselectionAnimation => true;
 
     public BattleRally()
     {
@@ -256,7 +257,7 @@ public class BattleRally : Spell
             piece.MotionAnimator.OnMoveComplete += onMoveComplete;
             
             // 开始移动
-            piece.Move(destination, true);
+            piece.Move(destination, true, IsReplayingAuthorizedCast);
             
             // 等待移动完成（包括落下）
             while (!moveComplete)
