@@ -1,9 +1,0 @@
-{
-    "name": "PCL2503.PlayModeTests",
-    "references": [],
-    "optionalUnityReferences": [
-        "TestAssemblies"
-    ],
-    "includePlatforms": [],
-    "excludePlatforms": []
-}

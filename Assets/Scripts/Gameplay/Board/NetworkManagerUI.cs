@@ -21,10 +21,12 @@ public class NetworkManagerUI : MonoBehaviour
     [Header("Mode Select Panel")]
     [SerializeField] private Button onlineModeButton;
     [SerializeField] private Button offlineModeButton;
+    [SerializeField] private Button exitGameButton;
 
     [Header("Main Panel Buttons")]
     [SerializeField] private Button startGameButton;
     [SerializeField] private Button joinGameButton;
+    [SerializeField] private Button mainReturnButton;
 
     [Header("Host Panel")]
     [SerializeField] private Button cancelHostButton;
@@ -43,6 +45,7 @@ public class NetworkManagerUI : MonoBehaviour
     [SerializeField] private Button dwarfButton;
     [SerializeField] private Button undeadButton;
     [SerializeField] private Button pandarenButton;
+    [SerializeField] private Button factionReturnButton;
 
     private enum FactionSelectionContext
     {
@@ -56,9 +59,38 @@ public class NetworkManagerUI : MonoBehaviour
     private FactionSelectionContext currentFactionContext = FactionSelectionContext.None;
     private int offlineSelectionIndex = 0;
 
+    internal static System.Action QuitGameOverride;
+
     private void Awake()
     {
         factionSelectionManager = FindFirstObjectByType<FactionSelectionManager>();
+
+        if (exitGameButton == null && modeSelectPanel != null)
+        {
+            Transform exitButtonTransform = modeSelectPanel.transform.Find("ExitGameButton");
+            if (exitButtonTransform != null)
+            {
+                exitGameButton = exitButtonTransform.GetComponent<Button>();
+            }
+        }
+
+        if (mainReturnButton == null && mainPanel != null)
+        {
+            Transform returnButtonTransform = mainPanel.transform.Find("MainReturnButton");
+            if (returnButtonTransform != null)
+            {
+                mainReturnButton = returnButtonTransform.GetComponent<Button>();
+            }
+        }
+
+        if (factionReturnButton == null && factionSelectPanel != null)
+        {
+            Transform returnButtonTransform = factionSelectPanel.transform.Find("FactionReturnButton");
+            if (returnButtonTransform != null)
+            {
+                factionReturnButton = returnButtonTransform.GetComponent<Button>();
+            }
+        }
 
         // Set initial state
         ShowModeSelectPanel();
@@ -66,10 +98,18 @@ public class NetworkManagerUI : MonoBehaviour
         //Mode Select Panel
         onlineModeButton.onClick.AddListener(OnOnlineModeClicked);
         offlineModeButton.onClick.AddListener(OnOfflineModeClicked);
+        if (exitGameButton != null)
+        {
+            exitGameButton.onClick.AddListener(OnExitGameClicked);
+        }
 
         // Main Panel
         startGameButton.onClick.AddListener(OnStartHostClicked);
         joinGameButton.onClick.AddListener(OnJoinGameClicked);
+        if (mainReturnButton != null)
+        {
+            mainReturnButton.onClick.AddListener(ShowModeSelectPanel);
+        }
 
         // Host Panel
         cancelHostButton.onClick.AddListener(OnCancelHostClicked);
@@ -83,6 +123,10 @@ public class NetworkManagerUI : MonoBehaviour
         dwarfButton.onClick.AddListener(() => OnFactionButtonClicked(Faction.Dwarf));
         undeadButton.onClick.AddListener(() => OnFactionButtonClicked(Faction.Undead));
         pandarenButton.onClick.AddListener(() => OnFactionButtonClicked(Faction.Pandaren));
+        if (factionReturnButton != null)
+        {
+            factionReturnButton.onClick.AddListener(OnFactionReturnClicked);
+        }
     }
 
     public void ShowModeSelectPanel()
@@ -195,6 +239,21 @@ public class NetworkManagerUI : MonoBehaviour
     {
         GameModeManager.Instance.SetMode(GameModeManager.GameMode.Offline);
         BeginFactionSelection(FactionSelectionContext.Offline);
+    }
+
+    private void OnExitGameClicked()
+    {
+        if (QuitGameOverride != null)
+        {
+            QuitGameOverride.Invoke();
+            return;
+        }
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 
     /// <summary>
@@ -351,9 +410,25 @@ public class NetworkManagerUI : MonoBehaviour
         hostWaitingPanel.SetActive(false);
         joinGamePanel.SetActive(false);
         factionSelectPanel.SetActive(true);
+        if (factionReturnButton != null)
+        {
+            factionReturnButton.gameObject.SetActive(context == FactionSelectionContext.Offline);
+        }
 
         // Refresh button states to disable already-taken factions
         RefreshFactionButtonStates();
+    }
+
+    private void OnFactionReturnClicked()
+    {
+        if (currentFactionContext != FactionSelectionContext.Offline)
+        {
+            return;
+        }
+
+        currentFactionContext = FactionSelectionContext.None;
+        factionErrorText.text = string.Empty;
+        ShowModeSelectPanel();
     }
 
     private void OnFactionButtonClicked(Faction faction)
