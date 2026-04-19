@@ -118,6 +118,7 @@ public class InputManager : MonoBehaviour
     // --- Online/Offline Variables ---
     private bool isHost;
     private bool isOfflineMode = false;
+    private Coroutine pendingControlTransferRoutine;
 
     
 
@@ -147,7 +148,11 @@ public class InputManager : MonoBehaviour
 
     void OnDestroy()
     {
-        clickAction.Disable();
+        if (clickAction != null)
+        {
+            clickAction.Disable();
+            clickAction.Dispose();
+        }
     }
 
     void Update()
@@ -349,6 +354,11 @@ public class InputManager : MonoBehaviour
         }
     }
 
+    public static bool ShouldSuppressDeselectionDropAfterCast(Spell spell)
+    {
+        return spell != null && spell.HandlesCasterDeselectionAnimation;
+    }
+
 
 
     private void TryMoveToTarget(RaycastHit hit)
@@ -425,6 +435,7 @@ public class InputManager : MonoBehaviour
     {
         Vector2 targetCoords = GetCoordinatesFromHit(hit);
         bool suppressDropAnimationOnReset = false;
+        bool keepControlledTargetSelected = false;
         
         // 检查点击的位置是否有效
         if (IsTargetInHighlightedList(targetCoords))
@@ -443,6 +454,8 @@ public class InputManager : MonoBehaviour
 
             // 2. 获取施法数据
             SpellCastData castData = selectedSpell.GetCastData(targetCoords);
+            suppressDropAnimationOnReset = ShouldSuppressDeselectionDropAfterCast(selectedSpell);
+            Piece originalCaster = selectedPiece;
 
             // 3. 根据模式执行施法
             if (isOfflineMode)
@@ -476,7 +489,6 @@ public class InputManager : MonoBehaviour
                 if (selectedSpell.EndsTurn)
                 {
                     logicManager.EndTurn();
-                    ResetSelection(); // 只有结束回合时才完全重置选择
                 }
                 else
                 {
@@ -490,14 +502,14 @@ public class InputManager : MonoBehaviour
                     if (targetPiece != null)
                     {
                         // 手动触发选中逻辑
-                        selectedPiece = targetPiece;
-                        currentState = InputState.PieceSelected;
-                        HighlightSelectedSquare();
+                        BeginDelayedControlTransfer(originalCaster, targetPiece);
+                        keepControlledTargetSelected = true;
                         ShowUI(selectedPiece, true); // true 表示我们可以控制它
                     }
                     else
                     {
                         ResetSelection();
+                        return;
                     }
                     */
                     // 1. 获取刚才被施法的目标棋子
@@ -514,16 +526,14 @@ public class InputManager : MonoBehaviour
                     if (isNowMyPiece)
                     {
                         // 4. 强制选中这个新棋子
-                        selectedPiece = targetPiece;
-                        currentState = InputState.PieceSelected;
+                        BeginDelayedControlTransfer(originalCaster, targetPiece);
+                        keepControlledTargetSelected = true;
                         
                         // 5. 高亮它
-                        HighlightSelectedSquare();
                         
                         // 6. 【关键】强制刷新 UI，显示新棋子的头像、技能栏、Buff
-                        ShowUI(selectedPiece, true);
 
-                        Debug.Log($"InputManager: Immediately took control of {targetPiece.PieceType}");
+                        Debug.Log($"InputManager: Queued control transfer for {targetPiece.PieceType}");
                     }
                     else
                     {
@@ -546,16 +556,14 @@ public class InputManager : MonoBehaviour
                         spellIndex,
                         castData
                     );
-                    // Only suppress local deselection drop for spells that handle
-                    // caster animation lifecycle themselves (e.g. Battle Rally).
-                    // For regular spells, we still want ResetSelection to drop the
-                    // lifted caster back to ground.
-                    suppressDropAnimationOnReset = selectedSpell.HandlesCasterDeselectionAnimation;
                 }
             }
 
             // 4. 重置选择状态
-            ResetSelection(playPieceDropAnimation: !suppressDropAnimationOnReset);
+            if (!keepControlledTargetSelected)
+            {
+                ResetSelection(playPieceDropAnimation: !suppressDropAnimationOnReset);
+            }
         }
         else
         {
@@ -577,6 +585,47 @@ public class InputManager : MonoBehaviour
             }
         }
     }
+    private void BeginDelayedControlTransfer(Piece originalCaster, Piece targetPiece)
+    {
+        if (pendingControlTransferRoutine != null)
+        {
+            StopCoroutine(pendingControlTransferRoutine);
+            pendingControlTransferRoutine = null;
+        }
+
+        selectedPiece = null;
+        currentState = InputState.None;
+        HideUI();
+
+        pendingControlTransferRoutine = StartCoroutine(FinishDelayedControlTransfer(originalCaster, targetPiece));
+    }
+
+    private System.Collections.IEnumerator FinishDelayedControlTransfer(Piece originalCaster, Piece targetPiece)
+    {
+        if (originalCaster != null && originalCaster != targetPiece)
+        {
+            PlayPieceDeselectionAnimation(originalCaster);
+        }
+
+        while ((originalCaster != null && originalCaster.IsAnimating) ||
+               (targetPiece != null && targetPiece.IsAnimating))
+        {
+            yield return null;
+        }
+
+        pendingControlTransferRoutine = null;
+
+        if (targetPiece == null)
+        {
+            yield break;
+        }
+
+        selectedPiece = targetPiece;
+        currentState = InputState.PieceSelected;
+        HighlightSelectedSquare();
+        ShowUI(selectedPiece, true);
+    }
+
     // ========================= UI METHODS =========================
 
     private void HideUI()

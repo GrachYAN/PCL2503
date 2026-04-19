@@ -325,6 +325,11 @@ public abstract class Piece : MonoBehaviour
             return false;
         }
 
+        if (logicManager.IsPrismaticBarrierBlockingSquare(targetPosition, IsWhite))
+        {
+            return false;
+        }
+
         Piece occupant = logicManager.boardMap[(int)targetPosition.x, (int)targetPosition.y];
         return occupant == null;
     }
@@ -541,6 +546,11 @@ public abstract class Piece : MonoBehaviour
 
                 Piece targetPiece = logicManager.boardMap[(int)extraPos.x, (int)extraPos.y];
                 if (targetPiece != null)
+                {
+                    continue;
+                }
+
+                if (logicManager.IsPrismaticBarrierBlockingSquare(extraPos, IsWhite))
                 {
                     continue;
                 }
@@ -779,6 +789,7 @@ public abstract class Piece : MonoBehaviour
             originalAllegiance = this.IsWhite;
         }
         this.IsWhite = newAllegiance;
+        ApplyFacingForCurrentSide();
 
         this.HasMoved = 0;
 
@@ -845,6 +856,7 @@ public abstract class Piece : MonoBehaviour
         if (originalAllegiance != null)
         {
             this.IsWhite = originalAllegiance.Value;
+            ApplyFacingForCurrentSide();
             Debug.Log($"{PieceType} at ({GetCoordinates().x}, {GetCoordinates().y}) has reverted to its original allegiance: {(this.IsWhite ? "White" : "Black")}.");
             originalAllegiance = null;
 
@@ -953,6 +965,12 @@ public abstract class Piece : MonoBehaviour
     public void SetFaction(bool isWhite)
     {
         IsWhite = isWhite;
+    }
+
+    private void ApplyFacingForCurrentSide()
+    {
+        Quaternion facingRotation = IsWhite ? Quaternion.identity : Quaternion.Euler(0f, 180f, 0f);
+        MotionAnimator.PlayFacingTurnAnimation(facingRotation);
     }
 
 }

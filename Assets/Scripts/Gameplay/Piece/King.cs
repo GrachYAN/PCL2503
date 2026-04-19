@@ -30,7 +30,9 @@ public class King : Piece
         if (rook is Rook && rook.HasMoved == 0)
         {
             bool canCastle = logicManager.boardMap[5, y] == null &&
-                             logicManager.boardMap[6, y] == null;
+                             logicManager.boardMap[6, y] == null &&
+                             !logicManager.IsPrismaticBarrierBlockingSquare(new Vector2(5, y), IsWhite) &&
+                             !logicManager.IsPrismaticBarrierBlockingSquare(new Vector2(6, y), IsWhite);
             return canCastle;
         }
         return false;
@@ -43,7 +45,10 @@ public class King : Piece
         {
             bool canCastle = logicManager.boardMap[1, y] == null &&
                              logicManager.boardMap[2, y] == null &&
-                             logicManager.boardMap[3, y] == null;
+                             logicManager.boardMap[3, y] == null &&
+                             !logicManager.IsPrismaticBarrierBlockingSquare(new Vector2(1, y), IsWhite) &&
+                             !logicManager.IsPrismaticBarrierBlockingSquare(new Vector2(2, y), IsWhite) &&
+                             !logicManager.IsPrismaticBarrierBlockingSquare(new Vector2(3, y), IsWhite);
             return canCastle;
         }
         return false;
@@ -91,6 +96,9 @@ public class King : Piece
             );
 
             if (!IsPositionWithinBoard(newPosition))
+                continue;
+
+            if (logicManager.IsPrismaticBarrierBlockingSquare(newPosition, IsWhite))
                 continue;
 
             Piece pieceAtNewPosition = logicManager.boardMap[(int)newPosition.x, (int)newPosition.y];

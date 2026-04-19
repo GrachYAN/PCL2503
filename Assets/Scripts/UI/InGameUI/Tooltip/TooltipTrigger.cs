@@ -13,14 +13,26 @@ public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitH
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (!string.IsNullOrEmpty(content))
+        if (string.IsNullOrEmpty(content))
         {
-            TooltipSystem.Instance.Show(content, GetComponent<RectTransform>());
+            return;
         }
+
+        TooltipSystem tooltipSystem = TooltipSystem.Instance;
+        RectTransform targetRect = GetComponent<RectTransform>();
+        if (tooltipSystem == null || targetRect == null)
+        {
+            return;
+        }
+
+        tooltipSystem.Show(content, targetRect);
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        TooltipSystem.Instance.Hide();
+        if (TooltipSystem.Instance != null)
+        {
+            TooltipSystem.Instance.Hide();
+        }
     }
 }

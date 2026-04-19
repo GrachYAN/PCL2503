@@ -25,6 +25,11 @@ public class Queen : Piece
                 if (!IsPositionWithinBoard(newPosition))
                     break;
 
+                if (logicManager.IsPrismaticBarrierBlockingSquare(newPosition, IsWhite))
+                {
+                    break;
+                }
+
                 Piece pieceAtNewPosition = logicManager.boardMap[(int)newPosition.x, (int)newPosition.y];
 
                 if (pieceAtNewPosition == null)
@@ -64,6 +69,11 @@ public class Queen : Piece
 
                 if (!IsPositionWithinBoard(attackedPosition))
                     break;
+
+                if (logicManager.IsPrismaticBarrierBlockingSquare(attackedPosition, IsWhite))
+                {
+                    break;
+                }
 
                 attackedFields.Add(attackedPosition);
 

@@ -5,6 +5,7 @@ using UnityEngine;
 
 public class SpellVFXManager : MonoBehaviour
 {
+    private const string QueenDiveChargePreviewPath = "QK/Qk_fire_arrow_01_ready_01_QueenDivePreview";
     public static readonly Color PhysicalColor = new Color(0.86f, 0.88f, 0.94f, 0.95f);
     public static readonly Color FireColor = new Color(1.00f, 0.47f, 0.18f, 0.95f);
     public static readonly Color HolyColor = new Color(1.00f, 0.84f, 0.35f, 0.95f);
@@ -13,6 +14,7 @@ public class SpellVFXManager : MonoBehaviour
     public static readonly Color StunColor = new Color(1.00f, 0.88f, 0.36f, 0.92f);
     public static readonly Color MindControlColor = MysticColor;
     public static readonly Color BuffColor = new Color(0.55f, 1.00f, 0.72f, 0.92f);
+    public static readonly Color SunwellAnthemColor = new Color(1.00f, 0.58f, 0.16f, 0.94f);
     private static SpellVFXManager instance;
     private Material lineMaterial;
     private Material orbMaterialTemplate;
@@ -88,7 +90,7 @@ public class SpellVFXManager : MonoBehaviour
                 PlayTeamBuff(caster, logicManager, BuffColor, "HCFX/HCFX_Energy_06");
                 break;
             case SunwellAnthem:
-                PlayTeamBuff(caster, logicManager, HolyColor, "HCFX/HCFX_Shine_07");
+                PlaySunwellAnthemBuff(caster, logicManager);
                 break;
             case AshenRebirth:
                 PlayReviveBlessing(caster, targetSquare);
@@ -266,7 +268,36 @@ public class SpellVFXManager : MonoBehaviour
     {
         PlaySubtleCharge(GetGroundPoint(caster.GetCoordinates()), HolyColor);
         SpawnRingPulse(GetGroundPoint(caster.GetCoordinates()), HolyColor, 0.55f, 0.055f, 0.34f);
-        SpawnTileField(GetRampartProtectedSquares(caster, logicManager), MultiplyColor(HolyColor, 0.9f), "HCFX/HCFX_Shine_07");
+        SpawnRampartBeneficiaryEffects(caster, logicManager, MultiplyColor(HolyColor, 1.02f), "HCFX/HCFX_Shine_07");
+        SpawnTransientRampartAura(caster, logicManager);
+    }
+
+    private void PlaySunwellAnthemBuff(Piece caster, LogicManager logicManager)
+    {
+        Color anthemTint = SunwellAnthemColor;
+        PlayTeamBuff(caster, logicManager, anthemTint, "HCFX/HCFX_Energy_06");
+    }
+
+    private void SpawnTransientRampartAura(Piece caster, LogicManager logicManager)
+    {
+        if (caster == null || logicManager == null || logicManager.fortifiedRampartAuraPrefab == null)
+        {
+            return;
+        }
+
+        Vector3 center = GetGroundPoint(caster.GetCoordinates());
+        GameObject auraObject = Instantiate(
+            logicManager.fortifiedRampartAuraPrefab,
+            center + Vector3.up * 0.04f,
+            Quaternion.identity);
+
+        RampartAuraVisual auraVisual = auraObject.GetComponent<RampartAuraVisual>();
+        if (auraVisual == null)
+        {
+            auraVisual = auraObject.AddComponent<RampartAuraVisual>();
+        }
+
+        auraVisual.InitializeTransient(center, 2, 1.05f);
     }
 
     private void PlayTeamBuff(Piece caster, LogicManager logicManager, Color tint, string tileEffectPath)
@@ -301,10 +332,26 @@ public class SpellVFXManager : MonoBehaviour
 
         PlayFireChestCharge(chargePoint, 0.86f, 0.46f, 0.15f, false);
         SpawnPolyline(new[] { chargePoint, ventPoint }, MultiplyAlpha(FireColor, 0.85f), 0.020f, 0.12f);
-        SpawnSimpleChargeOrb(strikeStart, FireColor, 0.05f, 0.11f, 0.12f, Vector3.down * 0.14f);
+        SpawnQueenDiveChargePreview(strikeStart);
         SpawnPolyline(new[] { strikeStart, impactPoint }, MultiplyAlpha(FireColor, 0.95f), 0.032f, 0.16f);
         SpawnEffect("HCFX/HCFX_Hit_10", impactPoint, Quaternion.identity, 0.20f, MultiplyAlpha(FireColor, 0.88f), 0.7f);
         SpawnRingPulse(GetGroundPoint(targetSquare), MultiplyAlpha(FireColor, 0.72f), 0.12f, 0.016f, 0.16f);
+    }
+
+    private void SpawnQueenDiveChargePreview(Vector3 position)
+    {
+        GameObject preview = SpawnEffect(
+            QueenDiveChargePreviewPath,
+            position,
+            Quaternion.identity,
+            0.45f,
+            MultiplyAlpha(MultiplyColor(FireColor, 0.96f), 0.88f),
+            0.20f);
+
+        if (preview != null)
+        {
+            StartCoroutine(AnimateRise(preview.transform, Vector3.down * 0.14f, 0.12f));
+        }
     }
 
     private void PlayFireChestCharge(Vector3 position, float readyScale, float burstScale, float ringRadius, bool addHeatLine)
@@ -427,6 +474,31 @@ public class SpellVFXManager : MonoBehaviour
             if (!string.IsNullOrEmpty(effectPath))
             {
                 SpawnEffect(effectPath, point + Vector3.up * 0.10f, Quaternion.identity, 0.24f, tint, 1.0f);
+            }
+        }
+    }
+
+    private void SpawnRampartBeneficiaryEffects(Piece source, LogicManager logicManager, Color tint, string effectPath)
+    {
+        if (source == null || logicManager == null)
+        {
+            return;
+        }
+
+        foreach (Vector2 square in GetRampartProtectedSquares(source, logicManager).Distinct())
+        {
+            Piece piece = TryGetPieceAt(logicManager, square);
+            if (piece == null)
+            {
+                continue;
+            }
+
+            Vector3 groundPoint = GetGroundPoint(square);
+            SpawnRingPulse(groundPoint, MultiplyColor(tint, 0.92f), 0.22f, 0.03f, 0.22f);
+
+            if (!string.IsNullOrEmpty(effectPath))
+            {
+                SpawnEffect(effectPath, GetChestPoint(piece), Quaternion.identity, 0.36f, tint, 1.0f);
             }
         }
     }

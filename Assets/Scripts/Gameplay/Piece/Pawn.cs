@@ -16,7 +16,9 @@ public class Pawn : Piece
         int direction = IsWhite ? 1 : -1;
 
         Vector2 forwardMove = new Vector2(currentCoordinates.x, currentCoordinates.y + direction);
-        if (IsPositionWithinBoard(forwardMove) && logicManager.boardMap[(int)forwardMove.x, (int)forwardMove.y] == null)
+        if (IsPositionWithinBoard(forwardMove)
+            && !logicManager.IsPrismaticBarrierBlockingSquare(forwardMove, IsWhite)
+            && logicManager.boardMap[(int)forwardMove.x, (int)forwardMove.y] == null)
         {
             legalMoves.Add(forwardMove);
         }
@@ -24,7 +26,11 @@ public class Pawn : Piece
         if (HasMoved == 0)
         {
             Vector2 doubleForwardMove = new Vector2(currentCoordinates.x, currentCoordinates.y + (2 * direction));
-            if (IsPositionWithinBoard(doubleForwardMove) && logicManager.boardMap[(int)forwardMove.x, (int)forwardMove.y] == null && logicManager.boardMap[(int)doubleForwardMove.x, (int)doubleForwardMove.y] == null)
+            if (IsPositionWithinBoard(doubleForwardMove)
+                && !logicManager.IsPrismaticBarrierBlockingSquare(forwardMove, IsWhite)
+                && !logicManager.IsPrismaticBarrierBlockingSquare(doubleForwardMove, IsWhite)
+                && logicManager.boardMap[(int)forwardMove.x, (int)forwardMove.y] == null
+                && logicManager.boardMap[(int)doubleForwardMove.x, (int)doubleForwardMove.y] == null)
             {
                 legalMoves.Add(doubleForwardMove);
             }

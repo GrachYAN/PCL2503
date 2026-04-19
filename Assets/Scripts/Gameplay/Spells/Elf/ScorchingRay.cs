@@ -27,6 +27,7 @@ public class ScorchingRay : Spell
                 Vector2 targetPos = new Vector2(casterPos.x + step * directionsX[i], casterPos.y + step * directionsY[i]);
 
                 if (!Caster.IsPositionWithinBoard(targetPos)) break;
+                if (LogicManager.IsPrismaticBarrierBlockingSquare(targetPos, Caster.IsWhite)) break;
 
                 Piece pieceAtTarget = LogicManager.boardMap[(int)targetPos.x, (int)targetPos.y];
                 if (pieceAtTarget != null)
@@ -49,6 +50,11 @@ public class ScorchingRay : Spell
         Vector2 direction = (target - casterPos).normalized;
         direction = new Vector2(Mathf.Round(direction.x), Mathf.Round(direction.y));
 
+        if (!LogicManager.HasLineOfSight(casterPos, target, Caster.IsWhite))
+        {
+            return;
+        }
+
         int firstDamage = 5 + Caster.DamageBonus;
         int subsequentDamage = 3 + Caster.DamageBonus;
 
@@ -68,6 +74,7 @@ public class ScorchingRay : Spell
         {
             Vector2 nextPos = target + (direction * step);
             if (!Caster.IsPositionWithinBoard(nextPos)) break;
+            if (LogicManager.IsPrismaticBarrierBlockingSquare(nextPos, Caster.IsWhite)) break;
 
             Piece nextPiece = LogicManager.boardMap[(int)nextPos.x, (int)nextPos.y];
             if (nextPiece != null)

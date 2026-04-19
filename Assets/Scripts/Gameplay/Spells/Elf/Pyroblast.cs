@@ -49,6 +49,11 @@ public class Pyroblast : Spell
                 }
 
                 // B. ��ȡ��λ�õ�����
+                if (LogicManager.IsPrismaticBarrierBlockingSquare(checkPosVec, Caster.IsWhite))
+                {
+                    break;
+                }
+
                 Piece hitPiece = LogicManager.boardMap[checkPos.x, checkPos.y];
 
                 if (hitPiece != null)
@@ -75,6 +80,7 @@ public class Pyroblast : Spell
     protected override void ExecuteEffect(Vector2 targetSquare)
     {
         if (LogicManager == null) return;
+        if (!LogicManager.HasLineOfSight(Caster.GetCoordinates(), targetSquare, Caster.IsWhite)) return;
 
         int x = Mathf.RoundToInt(targetSquare.x);
         int y = Mathf.RoundToInt(targetSquare.y);

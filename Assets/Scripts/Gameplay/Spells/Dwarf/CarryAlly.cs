@@ -1,6 +1,3 @@
-
-
-
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,9 +9,15 @@ public class CarryAlly : Spell
         new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1)
     };
 
+    private const float SpiralLiftHeight = 2f;
+    private const float SpiralHorizontalRadius = 0.2f;
+    private const float SpiralDuration = 1.05f;
+    private const float SettleDuration = 0.28f;
+
     private Vector2Int? pendingAlly;
     private Vector2Int? pendingDestination;
     private Vector2Int? pendingDrop;
+
     public override bool HandlesCasterDeselectionAnimation => true;
 
     public CarryAlly()
@@ -34,7 +37,6 @@ public class CarryAlly : Spell
 
     public override void CancelTargeting()
     {
-        // 为已选择的友军播放落下动画
         if (pendingAlly.HasValue && LogicManager != null)
         {
             Piece allyPiece = LogicManager.boardMap[pendingAlly.Value.x, pendingAlly.Value.y];
@@ -43,6 +45,7 @@ public class CarryAlly : Spell
                 allyPiece.MotionAnimator.PlayCancelDropAnimation();
             }
         }
+
         pendingAlly = null;
         pendingDestination = null;
         pendingDrop = null;
@@ -96,7 +99,6 @@ public class CarryAlly : Spell
                 return false;
             }
 
-            // 为选中的友军播放升起动画
             if (LogicManager != null)
             {
                 Piece allyPiece = LogicManager.boardMap[gridTarget.x, gridTarget.y];
@@ -199,9 +201,6 @@ public class CarryAlly : Spell
         int manaCost = GetEffectiveManaCost();
         int cooldown = GetEffectiveCooldown();
 
-        // IMPORTANT:
-        // Deduct mana/cooldown synchronously so server RPC can immediately
-        // broadcast authoritative resource state to clients.
         if (!Caster.UseMana(manaCost))
         {
             return;
@@ -219,7 +218,6 @@ public class CarryAlly : Spell
             SpellVFXManager.Instance.PlaySpellVFX(this, Caster, LogicManager, targetSquare);
         }
 
-        // Keep original visual intent: if Gryphon not lifted, lift first then execute.
         if (Caster != null && !Caster.MotionAnimator.IsLifted)
         {
             Caster.MotionAnimator.PlayLiftAnimation(() => ExecuteEffect(targetSquare));
@@ -257,7 +255,6 @@ public class CarryAlly : Spell
             return;
         }
 
-        // 开始执行 Carry Ally 动画序列
         Caster.StartCoroutine(ExecuteCarryAllyAnimation(ally, destPos, dropPos));
 
         pendingAlly = null;
@@ -267,103 +264,125 @@ public class CarryAlly : Spell
 
     private System.Collections.IEnumerator ExecuteCarryAllyAnimation(Piece ally, Vector2Int destPos, Vector2Int dropPos)
     {
-        // 0. 确保 Gryphon 已升起（视觉上与原设计一致）
-        if (!Caster.MotionAnimator.IsLifted)
+        PieceMotionAnimator casterAnimator = Caster.MotionAnimator;
+        float casterGroundY = casterAnimator.GroundY;
+        Quaternion casterGroundRotation = casterAnimator.GroundRotation;
+
+        if (!casterAnimator.IsLifted)
         {
             bool gryphonLiftComplete = false;
-            Caster.MotionAnimator.PlayLiftAnimation(() => gryphonLiftComplete = true);
+            casterAnimator.PlayLiftAnimation(() => gryphonLiftComplete = true);
             while (!gryphonLiftComplete)
             {
                 yield return null;
             }
         }
 
-        // 1. 让友军保持悬停状态（选中时已经升起）
-        // 确保友军已经完成升起动画
         while (ally.MotionAnimator.CurrentState == PieceAnimationState.Lifting)
         {
             yield return null;
         }
 
-        // 2. Gryphon 升空（螺旋上升效果）
         yield return Caster.StartCoroutine(PlayGryphonLiftOffAnimation());
 
-        // 3. 先让友军移动
         bool allyMoveComplete = false;
-        System.Action<Vector3> onAllyMoveComplete = (pos) => allyMoveComplete = true;
+        System.Action<Vector3> onAllyMoveComplete = _ => allyMoveComplete = true;
         ally.MotionAnimator.OnMoveComplete += onAllyMoveComplete;
         ally.Move(new Vector2(dropPos.x, dropPos.y), true);
 
-        // 4. 等待友军移动完成
         while (!allyMoveComplete)
         {
             yield return null;
         }
+
         ally.MotionAnimator.OnMoveComplete -= onAllyMoveComplete;
 
-        // 5. 然后 Gryphon 移动
         bool gryphonMoveComplete = false;
-        System.Action<Vector3> onGryphonMoveComplete = (pos) => gryphonMoveComplete = true;
+        System.Action<Vector3> onGryphonMoveComplete = _ => gryphonMoveComplete = true;
         Caster.MotionAnimator.OnMoveComplete += onGryphonMoveComplete;
         Caster.Move(new Vector2(destPos.x, destPos.y), true);
 
-        // 6. 等待 Gryphon 移动完成
         while (!gryphonMoveComplete)
         {
             yield return null;
         }
-        Caster.MotionAnimator.OnMoveComplete -= onGryphonMoveComplete;
 
-        // 7. 动画完成，清理状态
+        Caster.MotionAnimator.OnMoveComplete -= onGryphonMoveComplete;
+        EnsureCasterGrounded(destPos, casterGroundY, casterGroundRotation);
         yield return null;
     }
 
     private System.Collections.IEnumerator PlayGryphonLiftOffAnimation()
     {
-        // 保存初始位置
         Vector3 startPosition = Caster.transform.position;
         float startY = startPosition.y;
-        float targetY = startY + 2.0f; // 升空高度（2-3个棋子高度）
-        float duration = 1.2f; // 升空动画时间，稍长一点更流畅
+        Quaternion groundRotation = Caster.MotionAnimator.GroundRotation;
+        float targetY = startY + SpiralLiftHeight;
+        float settleRise = Mathf.Clamp(Caster.MotionAnimator.PieceHeight, 0.35f, 0.85f);
+        float settleTargetY = targetY + settleRise;
         float elapsed = 0f;
 
-        // 螺旋上升效果
-        while (elapsed < duration)
+        while (elapsed < SpiralDuration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-            
-            // 上升（使用缓动曲线使动画更自然）
-            float easeT = Mathf.SmoothStep(0, 1, t);
+            float t = Mathf.Clamp01(elapsed / SpiralDuration);
+            float easeT = Mathf.SmoothStep(0f, 1f, t);
             float y = Mathf.Lerp(startY, targetY, easeT);
-            
-            // 旋转（螺旋效果）
-            float rotation = t * 360f; // 一圈
-            
-            // 水平微小摆动
-            float offsetX = Mathf.Sin(t * Mathf.PI * 4) * 0.2f;
-            float offsetZ = Mathf.Cos(t * Mathf.PI * 4) * 0.2f;
-            
-            // 更新位置
+            float rotation = t * 360f;
+            float offsetX = Mathf.Sin(t * Mathf.PI * 4f) * SpiralHorizontalRadius;
+            float offsetZ = Mathf.Cos(t * Mathf.PI * 4f) * SpiralHorizontalRadius;
+
             Caster.transform.position = new Vector3(
                 startPosition.x + offsetX,
                 y,
                 startPosition.z + offsetZ
             );
-            
-            // 更新旋转
-            Caster.transform.rotation = Quaternion.Euler(0, rotation, 0);
-            
+
+            Caster.transform.rotation = GetLiftOffRotation(groundRotation, rotation);
             yield return null;
         }
 
-        // 确保最终位置正确（保持在升空位置）
-        Caster.transform.position = new Vector3(
-            startPosition.x,
-            targetY,
-            startPosition.z
-        );
-        Caster.transform.rotation = Quaternion.identity;
+        Vector3 settleStartPosition = Caster.transform.position;
+        Quaternion settleStartRotation = Caster.transform.rotation;
+        Vector3 settleTargetPosition = new Vector3(startPosition.x, settleTargetY, startPosition.z);
+
+        elapsed = 0f;
+        while (elapsed < SettleDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / SettleDuration);
+            float easeT = Mathf.SmoothStep(0f, 1f, t);
+
+            Caster.transform.position = Vector3.Lerp(settleStartPosition, settleTargetPosition, easeT);
+            Caster.transform.rotation = Quaternion.Slerp(settleStartRotation, groundRotation, easeT);
+
+            yield return null;
+        }
+
+        Caster.MotionAnimator.ForceSetState(settleTargetPosition, groundRotation, PieceAnimationState.Lifted);
+    }
+
+    private static Quaternion GetLiftOffRotation(Quaternion groundRotation, float spinDegrees)
+    {
+        return groundRotation * Quaternion.Euler(0f, spinDegrees, 0f);
+    }
+
+    private static Vector3 GetBoardWorldPosition(Vector2Int boardPosition, float y)
+    {
+        return new Vector3(boardPosition.x, y, boardPosition.y);
+    }
+
+    private void EnsureCasterGrounded(Vector2Int destPos, float groundY, Quaternion groundRotation)
+    {
+        Vector3 groundedPosition = GetBoardWorldPosition(destPos, groundY);
+        bool positionMismatch = Vector3.Distance(Caster.transform.position, groundedPosition) > 0.01f;
+        bool rotationMismatch = Quaternion.Angle(Caster.transform.rotation, groundRotation) > 0.5f;
+        bool needsReset = Caster.MotionAnimator.CurrentState != PieceAnimationState.Idle || positionMismatch || rotationMismatch;
+
+        if (needsReset)
+        {
+            Caster.MotionAnimator.ForceSetState(groundedPosition, groundRotation, PieceAnimationState.Idle);
+        }
     }
 
     private List<Vector2Int> GetAdjacentAllies()
@@ -384,12 +403,9 @@ public class CarryAlly : Spell
             }
 
             Piece ally = LogicManager.boardMap[pos.x, pos.y];
-            if (ally != null && ally.IsWhite == Caster.IsWhite)
+            if (ally != null && ally.IsWhite == Caster.IsWhite && GetDestinationsForAlly(pos).Count > 0)
             {
-                if (GetDestinationsForAlly(pos).Count > 0)
-                {
-                    allies.Add(pos);
-                }
+                allies.Add(pos);
             }
         }
 
@@ -405,7 +421,6 @@ public class CarryAlly : Spell
         }
 
         Vector2Int casterPos = Vector2Int.RoundToInt(Caster.GetCoordinates());
-
         foreach (Vector2Int dir in AdjacentOffsets)
         {
             if (dir == Vector2Int.zero)
@@ -478,12 +493,7 @@ public class CarryAlly : Spell
         foreach (Vector2Int offset in AdjacentOffsets)
         {
             Vector2Int pos = queenDest + offset;
-            if (!Caster.IsPositionWithinBoard(pos))
-            {
-                continue;
-            }
-
-            if (pos == queenDest)
+            if (!Caster.IsPositionWithinBoard(pos) || pos == queenDest)
             {
                 continue;
             }

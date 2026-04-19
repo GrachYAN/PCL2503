@@ -27,6 +27,11 @@ public class Knight : Piece
 
             if (IsPositionWithinBoard(targetPosition))
             {
+                if (logicManager.IsPrismaticBarrierBlockingSquare(targetPosition, IsWhite))
+                {
+                    continue;
+                }
+
                 Piece pieceAtTarget = logicManager.boardMap[(int)targetPosition.x, (int)targetPosition.y];
 
                 if (pieceAtTarget == null)

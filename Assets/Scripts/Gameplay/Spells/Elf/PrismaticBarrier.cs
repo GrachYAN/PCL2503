@@ -24,6 +24,7 @@ public class PrismaticBarrier : Spell
             for (int i = 1; i < 8; i++)
             {
                 Vector2 targetPos = startPos + dir * i;
+                if (LogicManager.HasAnyPrismaticBarrierAt(targetPos)) break;
                 if (!Caster.IsPositionWithinBoard(targetPos)) break; // �������̣�������
 
                 // Ŀ�������ǿյ�
@@ -44,6 +45,6 @@ public class PrismaticBarrier : Spell
     protected override void ExecuteEffect(Vector2 target)
     {
         // ����LogicManager����һ������3�غϵ�����
-        LogicManager.PlacePrismaticBarrier(target, 3);
+        LogicManager.PlacePrismaticBarrier(target, 3, Caster.IsWhite);
     }
 }

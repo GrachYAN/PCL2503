@@ -24,11 +24,13 @@ public class LogicManager : NetworkBehaviour
     //barrier prefab
     [Header("Spell Prefabs")]
     public GameObject prismaticBarrierPrefab;
+    public GameObject fortifiedRampartAuraPrefab;
     public GameObject flameMarkPrefab; // 火焰标记的
 
     private class PrismaticBarrierInstance
     {
         public Vector2 Position;
+        public bool OwnerIsWhite;
         public int RemainingRounds;
         public GameObject PrefabInstance;
     }
@@ -627,7 +629,17 @@ public class LogicManager : NetworkBehaviour
             return;
         }
 
-        activeRampartAuras.RemoveAll(aura => aura.Source == null || aura.Source == source);
+        for (int i = activeRampartAuras.Count - 1; i >= 0; i--)
+        {
+            RampartAura aura = activeRampartAuras[i];
+            if (aura.Source != null && aura.Source != source)
+            {
+                continue;
+            }
+
+            activeRampartAuras.RemoveAt(i);
+        }
+
         activeRampartAuras.Add(new RampartAura
         {
             Source = source,
@@ -675,6 +687,11 @@ public class LogicManager : NetworkBehaviour
             if (aura.Source == null)
             {
                 activeRampartAuras.RemoveAt(i);
+                continue;
+            }
+
+            if (aura.Source.IsWhite != piece.IsWhite)
+            {
                 continue;
             }
 
@@ -805,6 +822,7 @@ public class LogicManager : NetworkBehaviour
         // 循环完成，没有障碍物
         return true;
     }
+
     */
     /// <summary>
     /// 检查两点之间是否有视线（LoS），会同时检查路径上的棋子和棱镜屏障。
@@ -841,7 +859,7 @@ public class LogicManager : NetworkBehaviour
             }
 
             // ⭐ 关键修改：检查格子上是否有屏障
-            if (activeBarriers.Any(b => (int)b.Position.x == x && (int)b.Position.y == y))
+            if (IsPrismaticBarrierBlockingSquare(new Vector2(x, y), (bool?)null))
             {
                 return false; // 被屏障阻挡
             }
@@ -856,6 +874,39 @@ public class LogicManager : NetworkBehaviour
     /// <summary>
     /// 用于存储被击毁棋子的信息
     /// </summary>
+    public bool HasLineOfSight(Vector2 start, Vector2 end, bool actorIsWhite)
+    {
+        Vector2 direction = end - start;
+        int steps = (int)Mathf.Max(Mathf.Abs(direction.x), Mathf.Abs(direction.y));
+
+        if (steps == 0) return true;
+        if (Mathf.Abs(direction.x) != 0 && Mathf.Abs(direction.y) != 0 && Mathf.Abs(direction.x) != Mathf.Abs(direction.y))
+        {
+            return true;
+        }
+
+        Vector2 stepDirection = direction / steps;
+
+        for (int i = 1; i < steps; i++)
+        {
+            Vector2 currentPos = start + stepDirection * i;
+            int x = Mathf.RoundToInt(currentPos.x);
+            int y = Mathf.RoundToInt(currentPos.y);
+
+            if (boardMap[x, y] != null)
+            {
+                return false;
+            }
+
+            if (IsPrismaticBarrierBlockingSquare(new Vector2(x, y), actorIsWhite))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public class DestroyedPieceInfo
     {
         public string PieceType;
@@ -1207,7 +1258,45 @@ public class LogicManager : NetworkBehaviour
 
     // ==================== 屏障 ====================
 
+    public bool IsPrismaticBarrierBlockingSquare(Vector2 position, bool actorIsWhite)
+    {
+        return IsPrismaticBarrierBlockingSquare(position, (bool?)actorIsWhite);
+    }
+
+    public bool HasAnyPrismaticBarrierAt(Vector2 position)
+    {
+        int x = Mathf.RoundToInt(position.x);
+        int y = Mathf.RoundToInt(position.y);
+        return activeBarriers.Any(b => Mathf.RoundToInt(b.Position.x) == x && Mathf.RoundToInt(b.Position.y) == y);
+    }
+
+    private bool IsPrismaticBarrierBlockingSquare(Vector2 position, bool? actorIsWhite)
+    {
+        int x = Mathf.RoundToInt(position.x);
+        int y = Mathf.RoundToInt(position.y);
+
+        foreach (PrismaticBarrierInstance barrier in activeBarriers)
+        {
+            if (Mathf.RoundToInt(barrier.Position.x) != x || Mathf.RoundToInt(barrier.Position.y) != y)
+            {
+                continue;
+            }
+
+            if (!actorIsWhite.HasValue || barrier.OwnerIsWhite != actorIsWhite.Value)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public void PlacePrismaticBarrier(Vector2 position, int duration)
+    {
+        PlacePrismaticBarrier(position, duration, IsWhiteTurn);
+    }
+
+    public void PlacePrismaticBarrier(Vector2 position, int duration, bool ownerIsWhite)
     {
         if (prismaticBarrierPrefab == null)
         {
@@ -1216,15 +1305,63 @@ public class LogicManager : NetworkBehaviour
         }
 
         // 在棋盘上创建屏障的视觉效果
-        GameObject barrierGO = Instantiate(prismaticBarrierPrefab, new Vector3(position.x, 0.5f, position.y), Quaternion.identity);
+        RemovePrismaticBarrierAtPosition(position);
+        GameObject barrierGO = Instantiate(prismaticBarrierPrefab, new Vector3(position.x, 0.56f, position.y), Quaternion.identity);
+        Vector3 barrierEuler = barrierGO.transform.eulerAngles;
+        barrierGO.transform.rotation = Quaternion.Euler(0f, barrierEuler.y, 0f);
+        barrierGO.transform.localScale = new Vector3(0.52f, 0.52f, 0.52f);
+
+        Renderer barrierRenderer = barrierGO.GetComponentInChildren<Renderer>();
+        if (barrierRenderer != null)
+        {
+            barrierRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            barrierRenderer.receiveShadows = false;
+
+            Material runtimeMaterial = barrierRenderer.material;
+            if (runtimeMaterial != null)
+            {
+                if (runtimeMaterial.HasProperty("baseColorFactor"))
+                {
+                    runtimeMaterial.SetColor("baseColorFactor", new Color(1.15f, 1.15f, 1.22f, 1f));
+                }
+
+                if (runtimeMaterial.HasProperty("emissiveFactor"))
+                {
+                    runtimeMaterial.SetColor("emissiveFactor", new Color(0.30f, 0.48f, 0.75f, 1f));
+                }
+            }
+        }
 
         var barrier = new PrismaticBarrierInstance
         {
             Position = position,
+            OwnerIsWhite = ownerIsWhite,
             RemainingRounds = duration * 2, // 持续3个完整回合 (6个半回合)
             PrefabInstance = barrierGO
         };
         activeBarriers.Add(barrier);
+    }
+
+    private void RemovePrismaticBarrierAtPosition(Vector2 position)
+    {
+        int x = Mathf.RoundToInt(position.x);
+        int y = Mathf.RoundToInt(position.y);
+
+        for (int i = activeBarriers.Count - 1; i >= 0; i--)
+        {
+            PrismaticBarrierInstance barrier = activeBarriers[i];
+            if (Mathf.RoundToInt(barrier.Position.x) != x || Mathf.RoundToInt(barrier.Position.y) != y)
+            {
+                continue;
+            }
+
+            if (barrier.PrefabInstance != null)
+            {
+                Destroy(barrier.PrefabInstance);
+            }
+
+            activeBarriers.RemoveAt(i);
+        }
     }
 
     private void TickPrismaticBarriers()
