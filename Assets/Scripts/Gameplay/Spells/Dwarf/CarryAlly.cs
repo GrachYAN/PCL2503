@@ -288,7 +288,8 @@ public class CarryAlly : Spell
         bool allyMoveComplete = false;
         System.Action<Vector3> onAllyMoveComplete = _ => allyMoveComplete = true;
         ally.MotionAnimator.OnMoveComplete += onAllyMoveComplete;
-        ally.Move(new Vector2(dropPos.x, dropPos.y), true);
+        // ally.Move(new Vector2(dropPos.x, dropPos.y), true);
+        ally.Move(new Vector2(dropPos.x, dropPos.y), true,true);
 
         while (!allyMoveComplete)
         {
