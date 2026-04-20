@@ -364,10 +364,14 @@ public class LogicManager : NetworkBehaviour
 
         if (shouldTick)
         {
-            TickRampartAuras();
-            TickSunwellWardAuras();
-            TickHeartOfMountainBuffs();
-            TickSunwellAnthemBuffs();
+            // TickRampartAuras();
+            TickRampartAuras(isWhiteTurnPhase);
+            // TickSunwellWardAuras();
+            TickSunwellWardAuras(isWhiteTurnPhase);
+            // TickHeartOfMountainBuffs();
+            TickHeartOfMountainBuffs(isWhiteTurnPhase);
+            // TickSunwellAnthemBuffs();
+            TickSunwellAnthemBuffs(isWhiteTurnPhase);
             TickMindControlEvents();
             TickPrismaticBarriers();
             TickFlameMarks();
@@ -422,10 +426,14 @@ public class LogicManager : NetworkBehaviour
         // but for now, this server-driven approach is simpler)
         RunTurnStartPhase(IsWhiteTurn);
 
-        TickRampartAuras();
-        TickSunwellWardAuras();
-        TickHeartOfMountainBuffs();
-        TickSunwellAnthemBuffs();
+        // TickRampartAuras();
+        TickRampartAuras(IsWhiteTurn);
+        // TickSunwellWardAuras();
+        // TickHeartOfMountainBuffs();
+        // TickSunwellAnthemBuffs();
+        TickSunwellWardAuras(IsWhiteTurn);
+        TickHeartOfMountainBuffs(IsWhiteTurn);
+        TickSunwellAnthemBuffs(IsWhiteTurn);
         TickMindControlEvents();
         TickPrismaticBarriers();
         TickFlameMarks();
@@ -648,7 +656,8 @@ public class LogicManager : NetworkBehaviour
         });
     }
 
-    private void TickRampartAuras()
+    // private void TickRampartAuras()
+    private void TickRampartAuras(bool isWhiteTurnPhase)
     {
         for (int i = activeRampartAuras.Count - 1; i >= 0; i--)
         {
@@ -659,7 +668,8 @@ public class LogicManager : NetworkBehaviour
                 continue;
             }
 
-            if (aura.Source.IsWhite == IsWhiteTurn)
+            // if (aura.Source.IsWhite == IsWhiteTurn)
+            if (aura.Source.IsWhite == isWhiteTurnPhase)
             {
                 aura.RemainingRounds--;
             }
@@ -762,9 +772,11 @@ public class LogicManager : NetworkBehaviour
         }
     }
 
-    private void TickHeartOfMountainBuffs()
+    // private void TickHeartOfMountainBuffs()
+    private void TickHeartOfMountainBuffs(bool isWhiteTurnPhase)
     {
-        if (IsWhiteTurn && whiteHeartBuff != null)
+        // if (IsWhiteTurn && whiteHeartBuff != null)
+        if (isWhiteTurnPhase && whiteHeartBuff != null)
         {
             whiteHeartBuff.RemainingRounds--;
             if (whiteHeartBuff.RemainingRounds <= 0)
@@ -773,7 +785,8 @@ public class LogicManager : NetworkBehaviour
             }
         }
 
-        if (!IsWhiteTurn && blackHeartBuff != null)
+        // if (!IsWhiteTurn && blackHeartBuff != null)
+        if (!isWhiteTurnPhase && blackHeartBuff != null)
         {
             blackHeartBuff.RemainingRounds--;
             if (blackHeartBuff.RemainingRounds <= 0)
@@ -1013,7 +1026,8 @@ public class LogicManager : NetworkBehaviour
         Debug.Log($"{sourceRook.PieceType} created a Sunwell Ward aura.");
     }
 
-    private void TickSunwellWardAuras()
+    // private void TickSunwellWardAuras()
+    private void TickSunwellWardAuras(bool isWhiteTurnPhase)
     {
         for (int i = activeSunwellWardAuras.Count - 1; i >= 0; i--)
         {
@@ -1025,7 +1039,8 @@ public class LogicManager : NetworkBehaviour
             }
 
             // 光环在施法者的回合开始时生效，到下一个他的回合开始时结束
-            if (aura.Source.IsWhite == IsWhiteTurn)
+            // if (aura.Source.IsWhite == IsWhiteTurn)
+            if (aura.Source.IsWhite == isWhiteTurnPhase)
             {
                 aura.RemainingRounds--;
             }
@@ -1092,12 +1107,14 @@ public class LogicManager : NetworkBehaviour
         Debug.Log((isWhiteTeam ? "White" : "Black") + " team is affected by Sunwell Anthem.");
     }
 
-    private void TickSunwellAnthemBuffs()
+    // private void TickSunwellAnthemBuffs()
+    private void TickSunwellAnthemBuffs(bool isWhiteTurnPhase)
     {
         // 处理白队Buff
         if (whiteAnthemBuff != null)
         {
-            if (IsWhiteTurn) // 只在轮到白队时减少持续时间
+            // if (IsWhiteTurn) // 只在轮到白队时减少持续时间
+            if (isWhiteTurnPhase)
             {
                 whiteAnthemBuff.RemainingRounds--;
             }
@@ -1116,7 +1133,8 @@ public class LogicManager : NetworkBehaviour
         // 处理黑队Buff
         if (blackAnthemBuff != null)
         {
-            if (!IsWhiteTurn) // 只在轮到黑队时减少持续时间
+            // if (!IsWhiteTurn) // 只在轮到黑队时减少持续时间
+            if (!isWhiteTurnPhase)
             {
                 blackAnthemBuff.RemainingRounds--;
             }
