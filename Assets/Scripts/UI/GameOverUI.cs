@@ -1,4 +1,4 @@
-using UnityEngine;
+锘縰sing UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
 
@@ -19,38 +19,39 @@ public class GameOverUI : MonoBehaviour
 
     public void ShowGameOver(string result)
     {
-        panel.SetActive(true);
-        winnerText.text = $"{result}";
+        GameNotificationManager notificationManager = GameNotificationManager.Instance != null
+            ? GameNotificationManager.Instance
+            : FindFirstObjectByType<GameNotificationManager>();
+
+        if (notificationManager != null)
+        {
+            notificationManager.ClearDamageTexts();
+        }
+
+        if (panel != null)
+        {
+            panel.SetActive(true);
+        }
+
+        if (winnerText != null)
+        {
+            winnerText.text = $"{result}";
+        }
+
         Time.timeScale = 0f;
     }
 
     public void OnBackToMenuClicked()
     {
-        // 1. 恢复时间（
         Time.timeScale = 1f;
 
-        // 2. 如果是联机模式，断开连接
-        if (Unity.Netcode.NetworkManager.Singleton != null)
+        Unity.Netcode.NetworkManager networkManager = Unity.Netcode.NetworkManager.Singleton;
+        if (networkManager != null)
         {
-            Unity.Netcode.NetworkManager.Singleton.Shutdown();
-            Destroy(Unity.Netcode.NetworkManager.Singleton.gameObject); // 彻底销毁网络管理器
+            networkManager.Shutdown();
+            Destroy(networkManager.gameObject);
         }
 
-        // 3. 加载登录场景
-        SceneManager.LoadScene("LoginScene");
+        SceneLoadGuard.TryLoadScene(ProjectSceneNames.Login, resetTimeScale: true);
     }
-
-    /*
-    public void HideGameOver()
-    {
-        panel.SetActive(false);
-    }
-
-    public void RestartGame()
-    {
-        Time.timeScale = 1;
-        UnityEngine.SceneManagement.SceneManager.LoadScene("ChessScene");
-        logicManager.Initialize();
-    }
-    */
 }

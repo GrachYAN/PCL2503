@@ -287,7 +287,7 @@ public class InputManager : MonoBehaviour
             currentState = InputState.PieceSelected;
 
             // 只有自己的棋子才播放升起动画
-            if (canControl)
+            if (ShouldPlaySelectionLiftAnimation(canControl, selectedPiece.IsStunned))
             {
                 PlayPieceSelectionAnimation(selectedPiece);
             }
@@ -300,6 +300,11 @@ public class InputManager : MonoBehaviour
         {
             ResetSelection(currentState == InputState.CastingSpell);
         }
+    }
+
+    public static bool ShouldPlaySelectionLiftAnimation(bool canControl, bool isStunned)
+    {
+        return canControl && !isStunned;
     }
 
     // ========================= MOVEMENT & SPELL LOGIC =========================
@@ -350,7 +355,7 @@ public class InputManager : MonoBehaviour
             case SpellCastFailReason.InvalidTarget:
                 GameSoundManager.Instance.PlayCannotTargetSound();
                 break;
-            // Stunned and NoCaster don't need sounds (UI should prevent these)
+            // Stunned, Rooted and NoCaster don't need sounds (UI should prevent these)
         }
     }
 
@@ -467,7 +472,12 @@ public class InputManager : MonoBehaviour
                 Vector2 primaryTarget = new Vector2(castData.PrimaryX, castData.PrimaryY);
 
                 // --- 真正执行施法的地方 ---
-                selectedSpell.Cast(primaryTarget);
+                bool castSucceeded = selectedSpell.Cast(primaryTarget);
+                if (!castSucceeded)
+                {
+                    HandleSpellExecutionFailure(originalCaster);
+                    return;
+                }
 
                 // 施法后结束回合
                 //logicManager.EndTurn();
@@ -598,6 +608,31 @@ public class InputManager : MonoBehaviour
         HideUI();
 
         pendingControlTransferRoutine = StartCoroutine(FinishDelayedControlTransfer(originalCaster, targetPiece));
+    }
+
+    private void HandleSpellExecutionFailure(Piece originalCaster)
+    {
+        if (selectedSpell != null)
+        {
+            selectedSpell.CancelTargeting();
+        }
+
+        selectedSpell = null;
+        UnhighlightLegalMoves();
+        UnhighlightSelectedSquare();
+        selectedPiece = null;
+        currentState = InputState.None;
+        HideUI();
+
+        if (originalCaster == null)
+        {
+            return;
+        }
+
+        selectedPiece = originalCaster;
+        currentState = InputState.PieceSelected;
+        HighlightSelectedSquare();
+        ShowUI(selectedPiece, true);
     }
 
     private System.Collections.IEnumerator FinishDelayedControlTransfer(Piece originalCaster, Piece targetPiece)

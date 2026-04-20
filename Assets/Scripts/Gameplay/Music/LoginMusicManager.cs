@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // This automatically adds an AudioSource component to the GameObject.
 [RequireComponent(typeof(AudioSource))]
@@ -9,6 +10,7 @@ public class LoginMusicManager : MonoBehaviour
     
     [SerializeField] private AudioClip loginSoundtrack;
     private AudioSource audioSource;
+    private bool isStopping;
 
     void Awake()
     {
@@ -42,13 +44,51 @@ public class LoginMusicManager : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += HandleSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
+    }
+
+    private void HandleSceneLoaded(Scene scene, LoadSceneMode loadSceneMode)
+    {
+        if (!string.Equals(scene.name, ProjectSceneNames.Login, System.StringComparison.Ordinal))
+        {
+            StopMusic();
+        }
+    }
+
     /// <summary>
     /// Call this to stop the music and clean up the manager.
     /// </summary>
     public void StopMusic()
     {
+        if (isStopping)
+        {
+            return;
+        }
+
+        isStopping = true;
+
         // You could add a fade-out here later.
-        audioSource.Stop();
+        if (audioSource != null)
+        {
+            audioSource.Stop();
+        }
         
         // Destroy this object, as its job is done.
         Destroy(this.gameObject); 

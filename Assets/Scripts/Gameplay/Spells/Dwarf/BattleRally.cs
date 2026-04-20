@@ -191,12 +191,7 @@ public class BattleRally : Spell
 
             int direction = piece.IsWhite ? 1 : -1;
             Vector2Int destination = piecePos + new Vector2Int(0, direction);
-            if (!Caster.IsPositionWithinBoard(destination))
-            {
-                continue;
-            }
-
-            if (LogicManager.boardMap[destination.x, destination.y] != null)
+            if (!CanRallyMovePiece(piece, destination))
             {
                 continue;
             }
@@ -257,6 +252,13 @@ public class BattleRally : Spell
             piece.MotionAnimator.OnMoveComplete += onMoveComplete;
             
             // 开始移动
+            if (!CanRallyMovePiece(piece, Vector2Int.RoundToInt(destination)))
+            {
+                piece.MotionAnimator.OnMoveComplete -= onMoveComplete;
+                piece.MotionAnimator.PlayCancelDropAnimation();
+                continue;
+            }
+
             piece.Move(destination, true, IsReplayingAuthorizedCast);
             
             // 等待移动完成（包括落下）
@@ -305,12 +307,7 @@ public class BattleRally : Spell
                 // Check if this piece can move 1 forward
                 int direction = piece.IsWhite ? 1 : -1;
                 Vector2Int destination = pos + new Vector2Int(0, direction);
-                if (!Caster.IsPositionWithinBoard(destination))
-                {
-                    continue;
-                }
-
-                if (LogicManager.boardMap[destination.x, destination.y] != null)
+                if (!CanRallyMovePiece(piece, destination))
                 {
                     continue;
                 }
@@ -320,6 +317,26 @@ public class BattleRally : Spell
         }
 
         return pieces;
+    }
+
+    private bool CanRallyMovePiece(Piece piece, Vector2Int destination)
+    {
+        if (piece == null || Caster == null || LogicManager == null)
+        {
+            return false;
+        }
+
+        if (piece.IsWhite != Caster.IsWhite || piece.IsStunned || piece.IsRooted || !Caster.IsPositionWithinBoard(destination))
+        {
+            return false;
+        }
+
+        if (LogicManager.IsPrismaticBarrierBlockingSquare(new Vector2(destination.x, destination.y), piece.IsWhite))
+        {
+            return false;
+        }
+
+        return LogicManager.boardMap[destination.x, destination.y] == null;
     }
 
     private Vector2Int GetSelectionOrInvalid(int index)

@@ -231,12 +231,32 @@ public class NetworkManagerUI : MonoBehaviour
 
     private void OnOnlineModeClicked()
     {
+        if (GameModeManager.Instance == null)
+        {
+            GlobalErrorReporter.ReportRecoverableMessage(
+                "Mode selection",
+                "GameModeManager is missing while switching to online mode.",
+                "Unable to switch to online mode.",
+                LogType.Error);
+            return;
+        }
+
         GameModeManager.Instance.SetMode(GameModeManager.GameMode.Online);
         ShowMainPanel();
     }
 
     private void OnOfflineModeClicked()
     {
+        if (GameModeManager.Instance == null)
+        {
+            GlobalErrorReporter.ReportRecoverableMessage(
+                "Mode selection",
+                "GameModeManager is missing while switching to offline mode.",
+                "Unable to switch to offline mode.",
+                LogType.Error);
+            return;
+        }
+
         GameModeManager.Instance.SetMode(GameModeManager.GameMode.Offline);
         BeginFactionSelection(FactionSelectionContext.Offline);
     }
@@ -272,6 +292,17 @@ public class NetworkManagerUI : MonoBehaviour
     /// </summary>
     private void OnStartHostClicked()
     {
+        if (NetworkManager.Singleton == null)
+        {
+            GlobalErrorReporter.ReportRecoverableMessage(
+                "Host startup",
+                "NetworkManager is missing while starting a host session.",
+                "Unable to start hosting right now.",
+                LogType.Error);
+            ShowMainPanel();
+            return;
+        }
+
         mainPanel.SetActive(false);
         hostWaitingPanel.SetActive(true);
         joinGamePanel.SetActive(false);
@@ -308,6 +339,17 @@ public class NetworkManagerUI : MonoBehaviour
     /// </summary>
     private void OnCancelHostClicked()
     {
+        if (NetworkManager.Singleton == null)
+        {
+            GlobalErrorReporter.ReportRecoverableMessage(
+                "Host shutdown",
+                "NetworkManager is missing while cancelling host setup.",
+                "Unable to cancel hosting cleanly.",
+                LogType.Error);
+            ShowMainPanel();
+            return;
+        }
+
         NetworkManager.Singleton.Shutdown();
     }
 
@@ -317,6 +359,16 @@ public class NetworkManagerUI : MonoBehaviour
     /// </summary>
     private void OnConnectClicked()
     {
+        if (NetworkManager.Singleton == null)
+        {
+            GlobalErrorReporter.ReportRecoverableMessage(
+                "Client connection",
+                "NetworkManager is missing while starting a client connection.",
+                "Unable to connect right now.",
+                LogType.Error);
+            return;
+        }
+
         string ip = ipAddressField.text;
         if (string.IsNullOrEmpty(ip))
         {
@@ -496,14 +548,20 @@ public class NetworkManagerUI : MonoBehaviour
 
     private void StartOfflineGame()
     {
-        if (networkSceneManager != null && !string.IsNullOrEmpty(networkSceneManager.GameSceneName))
+        string targetSceneName = networkSceneManager != null && !string.IsNullOrEmpty(networkSceneManager.GameSceneName)
+            ? networkSceneManager.GameSceneName
+            : ProjectSceneNames.Gameplay;
+
+        if (SceneLoadGuard.TryLoadScene(targetSceneName, ProjectSceneNames.Gameplay, resetTimeScale: true))
         {
-            SceneManager.LoadScene(networkSceneManager.GameSceneName);
-            LoginMusicManager.Instance.StopMusic();
+            if (LoginMusicManager.Instance != null)
+            {
+                LoginMusicManager.Instance.StopMusic();
+            }
         }
         else
         {
-            Debug.LogError("GameSceneName is not set in NetworkSceneManager! Cannot load game.");
+            Debug.LogError("Gameplay scene could not be loaded.");
         }
     }
 

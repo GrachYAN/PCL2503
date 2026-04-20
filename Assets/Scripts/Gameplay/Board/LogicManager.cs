@@ -283,7 +283,13 @@ public class LogicManager : NetworkBehaviour
         // --- 3. Execute Spell ---
         Debug.Log($"Server: Executing spell '{spell.SpellName}'");
         spell.ApplyCastData(castData);
-        spell.Cast(targetCoords);
+        bool castSucceeded = spell.Cast(targetCoords);
+        if (!castSucceeded)
+        {
+            Debug.LogWarning($"Server: Spell '{spell.SpellName}' failed during execution. Skipping sync and turn progression.");
+            return;
+        }
+
         CastSpellClientRpc(pieceX, pieceY, spellIndex, castData, piece.CurrentMana, spell.CurrentCooldown);
         // --- 4. End Turn ---
         //EndTurn(); // This flips the m_IsWhiteTurn_Network variable
@@ -585,7 +591,18 @@ public class LogicManager : NetworkBehaviour
             bool winnerIsWhite = !piece.IsWhite;
             string winnerName = GetWinnerDisplayName(winnerIsWhite);
             string result = $"{winnerName} Wins";
-            gameOverUI.ShowGameOver(result);
+            if (gameOverUI != null)
+            {
+                gameOverUI.ShowGameOver(result);
+            }
+            else
+            {
+                GlobalErrorReporter.ReportRecoverableMessage(
+                    "Game over UI",
+                    "GameOverUI is missing while attempting to show the match result.",
+                    "The match ended, but the result panel could not be shown.",
+                    LogType.Error);
+            }
             Time.timeScale = 0;
         }
     }

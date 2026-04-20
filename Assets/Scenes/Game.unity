@@ -1828,8 +1828,8 @@ MonoBehaviour:
     displayName: Sunwell Anthem
     icon: {fileID: 21300000, guid: 2b824a1a8391fd146a455e952c2a2864, type: 3}
     iconTint: {r: 1, g: 1, b: 1, a: 1}
-    description: 'Party-wide buff for 2 rounds: allies gain +2 damage, and -3 Mana
-      cost. The buff also applies a shield of 5 HP'
+    description: 'Party-wide buff for 2 rounds: allies gain +3 damage, and -3 Mana
+      cost.'
   - effectID: Heart of the Mountain
     displayName: Heart of the Mountain
     icon: {fileID: 21300000, guid: 2203653ab6385ec4f8485e9693432137, type: 3}

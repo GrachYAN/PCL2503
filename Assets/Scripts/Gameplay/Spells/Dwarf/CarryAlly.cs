@@ -51,6 +51,23 @@ public class CarryAlly : Spell
         pendingDrop = null;
     }
 
+    public override SpellCastFailReason GetCastFailReason()
+    {
+        SpellCastFailReason baseReason = base.GetCastFailReason();
+        if (baseReason != SpellCastFailReason.None)
+        {
+            return baseReason;
+        }
+
+        if (Caster != null && Caster.IsRooted)
+        {
+            Debug.Log($"施法失败 {SpellName}：{Caster.PieceType} 被定身，无法完成位移。");
+            return SpellCastFailReason.Rooted;
+        }
+
+        return SpellCastFailReason.None;
+    }
+
     public override List<Vector2> GetValidTargetSquares()
     {
         List<Vector2> drops = new List<Vector2>();
@@ -102,7 +119,7 @@ public class CarryAlly : Spell
             if (LogicManager != null)
             {
                 Piece allyPiece = LogicManager.boardMap[gridTarget.x, gridTarget.y];
-                if (allyPiece != null)
+                if (IsCarryableAlly(allyPiece))
                 {
                     allyPiece.MotionAnimator.PlayLiftAnimation();
                 }
@@ -191,11 +208,11 @@ public class CarryAlly : Spell
         return true;
     }
 
-    public override void Cast(Vector2 targetSquare)
+    public override bool Cast(Vector2 targetSquare)
     {
         if (!CanCast())
         {
-            return;
+            return false;
         }
 
         int manaCost = GetEffectiveManaCost();
@@ -203,7 +220,7 @@ public class CarryAlly : Spell
 
         if (!Caster.UseMana(manaCost))
         {
-            return;
+            return false;
         }
 
         CurrentCooldown = cooldown;
@@ -233,6 +250,7 @@ public class CarryAlly : Spell
         }
 
         Caster.OnSpellCast();
+        return true;
     }
 
     protected override void ExecuteEffect(Vector2 targetSquare)
@@ -247,7 +265,7 @@ public class CarryAlly : Spell
         Vector2Int dropPos = pendingDrop.Value;
 
         Piece ally = LogicManager.boardMap[allyPos.x, allyPos.y];
-        if (ally == null || ally.IsWhite != Caster.IsWhite)
+        if (!IsCarryableAlly(ally))
         {
             pendingAlly = null;
             pendingDestination = null;
@@ -301,7 +319,15 @@ public class CarryAlly : Spell
         bool gryphonMoveComplete = false;
         System.Action<Vector3> onGryphonMoveComplete = _ => gryphonMoveComplete = true;
         Caster.MotionAnimator.OnMoveComplete += onGryphonMoveComplete;
-        Caster.Move(new Vector2(destPos.x, destPos.y), true);
+
+        if (!CanCasterRelocateTo(destPos))
+        {
+            Caster.MotionAnimator.OnMoveComplete -= onGryphonMoveComplete;
+            EnsureCasterGrounded(Vector2Int.RoundToInt(Caster.GetCoordinates()), casterGroundY, casterGroundRotation);
+            yield break;
+        }
+
+        Caster.Move(new Vector2(destPos.x, destPos.y), true, IsReplayingAuthorizedCast);
 
         while (!gryphonMoveComplete)
         {
@@ -404,7 +430,7 @@ public class CarryAlly : Spell
             }
 
             Piece ally = LogicManager.boardMap[pos.x, pos.y];
-            if (ally != null && ally.IsWhite == Caster.IsWhite && GetDestinationsForAlly(pos).Count > 0)
+            if (IsCarryableAlly(ally) && GetDestinationsForAlly(pos).Count > 0)
             {
                 allies.Add(pos);
             }
@@ -447,7 +473,7 @@ public class CarryAlly : Spell
                     break;
                 }
 
-                if (GetDropSquares(dest).Count == 0)
+                if (!CanCasterRelocateTo(dest) || GetDropSquares(dest).Count == 0)
                 {
                     continue;
                 }
@@ -517,5 +543,34 @@ public class CarryAlly : Spell
         }
 
         return result;
+    }
+
+    private bool IsCarryableAlly(Piece ally)
+    {
+        return ally != null &&
+               Caster != null &&
+               ally.IsWhite == Caster.IsWhite &&
+               !ally.IsStunned;
+    }
+
+    private bool CanCasterRelocateTo(Vector2Int destination)
+    {
+        if (Caster == null || LogicManager == null)
+        {
+            return false;
+        }
+
+        if (Caster.IsStunned || Caster.IsRooted || !Caster.IsPositionWithinBoard(destination))
+        {
+            return false;
+        }
+
+        if (LogicManager.IsPrismaticBarrierBlockingSquare(new Vector2(destination.x, destination.y), Caster.IsWhite))
+        {
+            return false;
+        }
+
+        Piece occupant = LogicManager.boardMap[destination.x, destination.y];
+        return occupant == null || occupant == Caster;
     }
 }

@@ -346,7 +346,10 @@ public abstract class Piece : MonoBehaviour
         {
             Debug.Log($"{PieceType} is protected by Sunwell Ward and takes no damage.");  //这个之后要插UI
 
-            GameNotificationManager.Instance.ShowDamageText(transform.position, 0, damageType);
+            if (GameNotificationManager.Instance != null)
+            {
+                GameNotificationManager.Instance.ShowDamageText(transform.position, 0, damageType);
+            }
 
             return; // 免疫伤害
         }

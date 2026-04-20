@@ -13,6 +13,7 @@ public enum SpellCastFailReason
     OnCooldown,     // Spell is on cooldown
     InvalidTarget,  // Target is not valid
     Stunned,        // Caster is stunned
+    Rooted,         // Caster is rooted and cannot complete a self-move spell
     NoCaster        // No caster assigned
 }
 
@@ -159,9 +160,12 @@ public abstract class Spell
         return GetValidTargetSquares().Contains(primary);
     }
 
-    public virtual void Cast(Vector2 targetSquare)
+    public virtual bool Cast(Vector2 targetSquare)
     {
-        if (!CanCast()) return;
+        if (!CanCast())
+        {
+            return false;
+        }
 
         int manaCost = GetEffectiveManaCost();
         int cooldown = GetEffectiveCooldown();
@@ -169,36 +173,26 @@ public abstract class Spell
         if (!Caster.UseMana(manaCost))
         {
             Debug.Log($"{Caster.PieceType} 法力不足，无法施放 {SpellName}");
-            return;
+            return false;
         }
 
         CurrentCooldown = cooldown;
 
-        // Suppress move sound during spell execution
-        // (spells that move AND deal damage should only play damage sound)
-        if (GameSoundManager.Instance != null)
-        {
-            GameSoundManager.Instance.BeginSpellExecution();
-        }
+        BeginSpellExecutionAudio();
 
-        // if (SpellVFXManager.Instance != null)
-        // {
-        //     SpellVFXManager.Instance.PlaySpellVFX(this, Caster, LogicManager, targetSquare);
-        // }
-        PlaySpellVfxSafely(targetSquare);
+        bool castSucceeded = RecoverableExecution.Run(
+            $"Spell cast '{SpellName}' by '{Caster.PieceType}'",
+            () =>
+            {
+                PlaySpellVfxSafely(targetSquare);
+                ExecuteEffect(targetSquare);
+                Debug.Log($"{Caster.PieceType} 使用了 {SpellName}！");
+                Caster.OnSpellCast();
+            },
+            EndSpellExecutionAudio,
+            $"'{SpellName}' failed and was cancelled.");
 
-        // 执行技能效果
-        ExecuteEffect(targetSquare);
-
-        // Re-enable move sound after spell execution
-        if (GameSoundManager.Instance != null)
-        {
-            GameSoundManager.Instance.EndSpellExecution();
-        }
-
-        Debug.Log($"{Caster.PieceType} 使用了 {SpellName}！");
-
-        Caster.OnSpellCast();
+        return castSucceeded;
     }
 
     /// <summary>
@@ -206,45 +200,44 @@ public abstract class Spell
     /// local mana/cooldown state. This prevents client-side desync from blocking
     /// spell execution.
     /// </summary>
-    public virtual void ReplayAuthorizedCast(Vector2 targetSquare, int authoritativeCasterMana, int authoritativeCooldown)
+    public virtual bool ReplayAuthorizedCast(Vector2 targetSquare, int authoritativeCasterMana, int authoritativeCooldown)
     {
         if (Caster == null)
         {
-            return;
+            return false;
         }
 
         // Align local resource/cooldown state to authoritative server result first.
         Caster.SetMana(authoritativeCasterMana);
         CurrentCooldown = Mathf.Max(0, authoritativeCooldown);
 
-        // Keep the same audiovisual path as Cast(), but skip CanCast/UseMana checks.
-        if (GameSoundManager.Instance != null)
-        {
-            GameSoundManager.Instance.BeginSpellExecution();
-        }
+        BeginSpellExecutionAudio();
 
-        // if (SpellVFXManager.Instance != null)
-        // {
-        //     SpellVFXManager.Instance.PlaySpellVFX(this, Caster, LogicManager, targetSquare);
-        // }
-        PlaySpellVfxSafely(targetSquare);
+        bool replaySucceeded = RecoverableExecution.Run(
+            $"Spell replay '{SpellName}' by '{Caster.PieceType}'",
+            () =>
+            {
+                PlaySpellVfxSafely(targetSquare);
+                IsReplayingAuthorizedCast = true;
+                try
+                {
+                    ExecuteEffect(targetSquare);
+                }
+                finally
+                {
+                    IsReplayingAuthorizedCast = false;
+                }
 
-        IsReplayingAuthorizedCast = true;
-        try
-        {
-            ExecuteEffect(targetSquare);
-        }
-        finally
-        {
-            IsReplayingAuthorizedCast = false;
-        }
+                Caster.OnSpellCast();
+            },
+            () =>
+            {
+                IsReplayingAuthorizedCast = false;
+                EndSpellExecutionAudio();
+            },
+            $"'{SpellName}' failed while syncing to a client.");
 
-        if (GameSoundManager.Instance != null)
-        {
-            GameSoundManager.Instance.EndSpellExecution();
-        }
-
-        Caster.OnSpellCast();
+        return replaySucceeded;
     }
 
     protected abstract void ExecuteEffect(Vector2 targetSquare);
@@ -264,6 +257,22 @@ public abstract class Spell
         catch (Exception ex)
         {
             Debug.LogWarning($"Spell VFX failed for '{SpellName}', continuing with gameplay logic. Exception: {ex.Message}");
+        }
+    }
+
+    private void BeginSpellExecutionAudio()
+    {
+        if (GameSoundManager.Instance != null)
+        {
+            GameSoundManager.Instance.BeginSpellExecution();
+        }
+    }
+
+    private void EndSpellExecutionAudio()
+    {
+        if (GameSoundManager.Instance != null)
+        {
+            GameSoundManager.Instance.EndSpellExecution();
         }
     }
 

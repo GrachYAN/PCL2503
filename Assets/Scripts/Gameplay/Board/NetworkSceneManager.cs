@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 public class NetworkSceneManager : MonoBehaviour
 {
-    public string GameSceneName = "GameScene"; 
+    public string GameSceneName = ProjectSceneNames.Gameplay; 
 
     private NetworkManagerUI networkManagerUI;
 
@@ -126,7 +126,7 @@ public class NetworkSceneManager : MonoBehaviour
 
         if (factionSelectionManager == null)
         {
-            NetworkManager.Singleton.SceneManager.LoadScene(GameSceneName, LoadSceneMode.Single);
+            TryLoadNetworkGameScene();
             yield break;
         }
 
@@ -135,7 +135,7 @@ public class NetworkSceneManager : MonoBehaviour
             yield return null;
         }
 
-        NetworkManager.Singleton.SceneManager.LoadScene(GameSceneName, LoadSceneMode.Single);
+        TryLoadNetworkGameScene();
     }
 
     private void OnClientStoppedCallback(bool reconnecting)
@@ -147,9 +147,9 @@ public class NetworkSceneManager : MonoBehaviour
         string currentSceneName = SceneManager.GetActiveScene().name;
 
         // This logic is still good. If we disconnect, go back to LoginScene.
-        if (currentSceneName != "LoginScene")
+        if (currentSceneName != ProjectSceneNames.Login)
         {
-            SceneManager.LoadScene("LoginScene");
+            SceneLoadGuard.TryLoadScene(ProjectSceneNames.Login, resetTimeScale: true);
         }
         else if (networkManagerUI != null)
         {
@@ -188,7 +188,7 @@ public class NetworkSceneManager : MonoBehaviour
         // --- NEW LOGIC ---
         // If we stop on the LoginScene, the user *must* have clicked "Cancel".
         // Show the main panel *regardless* of the reconnecting flag.
-        if (currentSceneName == "LoginScene")
+        if (currentSceneName == ProjectSceneNames.Login)
         {
             if (networkManagerUI != null)
             {
@@ -203,6 +203,31 @@ public class NetworkSceneManager : MonoBehaviour
         if (reconnecting) return;
         
         // If not reconnecting, go back to the LoginScene.
-        SceneManager.LoadScene("LoginScene"); 
+        SceneLoadGuard.TryLoadScene(ProjectSceneNames.Login, resetTimeScale: true); 
+    }
+
+    private void TryLoadNetworkGameScene()
+    {
+        if (NetworkManager.Singleton == null)
+        {
+            GlobalErrorReporter.ReportRecoverableMessage(
+                "Network game scene load",
+                "NetworkManager is unavailable while attempting to load the gameplay scene.",
+                "Unable to start the gameplay scene.",
+                LogType.Error);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(GameSceneName) || !Application.CanStreamedLevelBeLoaded(GameSceneName))
+        {
+            GlobalErrorReporter.ReportRecoverableMessage(
+                "Network game scene load",
+                $"Game scene '{GameSceneName}' is missing from build settings.",
+                "Unable to start the gameplay scene.",
+                LogType.Error);
+            return;
+        }
+
+        NetworkManager.Singleton.SceneManager.LoadScene(GameSceneName, LoadSceneMode.Single);
     }
 }

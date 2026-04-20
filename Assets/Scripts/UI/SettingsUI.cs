@@ -154,12 +154,7 @@ public class SettingsUI : MonoBehaviour
 
     public void ConfirmRestart()
     {
-        if (logicManager != null)
-        {
-            Time.timeScale = 1;
-            UnityEngine.SceneManagement.SceneManager.LoadScene("ChessScene");
-            logicManager.Initialize();
-        }
+        SceneLoadGuard.TryLoadScene(ProjectSceneNames.Gameplay, resetTimeScale: true);
 
         if (confirmationPopup != null)
         {
